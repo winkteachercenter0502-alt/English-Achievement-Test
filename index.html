@@ -692,9 +692,9 @@ const SCRIPT_TITLE_TEXT = "text-blue-900";
 
 function renderScriptOutput(data) {
   const greetingBlock = `<div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 leading-relaxed">${textToHtml(data.greeting)}</div>`;
-  const closingBlock = `<div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 leading-relaxed mt-0.5">${textToHtml(data.closing)}</div>`;
+  const closingBlock = `<div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 leading-relaxed mt-px">${textToHtml(data.closing)}</div>`;
   const sectionsHtml = data.sections.map((s) => `
-    <div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 mt-0.5">
+    <div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 mt-px">
       <div class="border-l-4 ${SCRIPT_ACCENT_BORDER} pl-2 mb-0"><span class="font-extrabold text-sm ${SCRIPT_TITLE_TEXT}">${escapeHtml(s.title)}</span></div>
       <div class="leading-snug text-sm">${textToHtml(s.body)}</div>
     </div>`).join("");
