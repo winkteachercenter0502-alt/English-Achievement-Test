@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>캐츠잉글리시 | 성취도평가 상담 스크립트 생성기</title>
+<title>캐츠잉글리시 영어 성취도평가 스크립트 생성기(리포트 분석)</title>
 
 <!-- Tailwind CSS (Play CDN) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -44,9 +44,11 @@
   <header class="bg-gradient-to-r from-sky-600 to-sky-500 shadow-md">
     <div class="max-w-[1400px] mx-auto px-5 py-4 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl">📘</div>
+        <div class="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center overflow-hidden">
+          <img src="./폭슬리_3D_누끼.png" alt="폭슬리" class="w-full h-full object-contain scale-125" />
+        </div>
         <div>
-          <h1 class="text-white text-lg sm:text-xl font-extrabold leading-tight">캐츠잉글리시 성취도평가 상담 스크립트 생성기</h1>
+          <h1 class="text-white text-lg sm:text-xl font-extrabold leading-tight">캐츠잉글리시 영어 성취도평가 스크립트 생성기(리포트 분석)</h1>
           <p class="text-sky-100 text-xs sm:text-sm">교사용 · 리포트 붙여넣기 한 번으로 상담 스크립트 완성</p>
         </div>
       </div>
@@ -112,14 +114,19 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <h3 class="font-extrabold text-sky-900">완성된 상담 스크립트</h3>
-            <button id="btnCopy" class="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-extrabold rounded-lg px-3 py-2 transition">
-              📋 스크립트 복사하기
-            </button>
+            <div class="flex items-center gap-2">
+              <button id="btnResetScript" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 underline underline-offset-2">자동 생성 내용으로 되돌리기</button>
+              <button id="btnCopy" class="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-extrabold rounded-lg px-3 py-2 transition">
+                📋 스크립트 복사하기
+              </button>
+            </div>
           </div>
-          <div id="scriptOutput" class="whitespace-pre-wrap text-sm leading-relaxed bg-sky-50 border border-sky-100 rounded-xl p-4 min-h-[260px] scroll-panel">
+          <div id="scriptOutput" contenteditable="true" spellcheck="false"
+            class="whitespace-pre-wrap text-sm leading-relaxed bg-sky-50 rounded-xl p-4 min-h-[260px] scroll-panel outline-none cursor-text focus:bg-white focus:ring-2 focus:ring-sky-300 transition">
 학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.
 확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.
           </div>
+          <p class="text-xs text-slate-400 mt-1.5">✏️ 스크립트 안을 클릭하면 직접 띄어쓰기·표현을 수정할 수 있어요. 수정 후에는 위 버튼으로 자동 생성 내용으로 되돌릴 수 있어요.</p>
         </div>
       </div>
 
@@ -155,7 +162,7 @@
 
 <script>
 /* =========================================================================================
-   캐츠잉글리시 성취도평가 상담 스크립트 생성기
+   캐츠잉글리시 영어 성취도평가 스크립트 생성기(리포트 분석)
    -----------------------------------------------------------------------------------------
    구성
    1) LEVEL_DATA          : 레벨별 기본 정보 + 예시 이미지/파일 매칭 데이터베이스
@@ -422,6 +429,16 @@ function withName(name) {
   return (name && name.trim()) || "학생";
 }
 
+// 명사 뒤에 자연스럽게 붙는 서술격 조사(이에요/예요, 이네요/네요)를 받침 유무에 따라 선택합니다.
+// 예) "상태" + eyo → "상태예요" (받침 없음), "학생" + eyo → "학생이에요" (받침 있음)
+function copula(word, style) {
+  const last = (word || "").trim().slice(-1);
+  const batchim = hasBatchim(last);
+  if (style === "eyo") return batchim ? "이에요" : "예요";
+  if (style === "neyo") return batchim ? "이네요" : "네요";
+  return "";
+}
+
 // 누적 응시 기록에서 현재 응시(자기 자신)를 제외하고, 같은 트랙(Star/Galaxy/Universe/Infinite)의
 // 가장 최근 이전 기록을 찾습니다. (교사 가이드: "동일한 시험지 종류 내 응시기록"만 비교 대상으로 사용)
 function findPrevSameTrack(history, track, currentDate, currentScore) {
@@ -449,7 +466,7 @@ function getStrengthAreas(areas) {
 function buildDurationComment(duration, name, subj) {
   if (duration == null) return "";
   if (duration <= 10) {
-    return `소요 시간을 보니 ${duration}분 만에 빠르게 마쳤어요. 다음 평가 때는 ${name}${subj} 문제를 얼마나 꼼꼼히 살펴보며 풀었는지 함께 확인해봐도 좋을 것 같아요.`;
+    return `소요 시간을 보니 ${duration}분 만에 빠르게 마쳤어요. 다음 평가 때는 문제를 조금 더 꼼꼼히 살펴보며 풀도록 지도할게요.`;
   }
   return `${name}${subj} ${duration}분 동안 진행한 것으로 봐서 성취도평가에 정말 진지하게 임해주었네요~^^ 문제를 꼼꼼하게 푸는 습관도 길러지는 것 같아 기특합니다.`;
 }
@@ -462,7 +479,7 @@ function buildTrendComment(current, prevEntry, name, subj) {
   const prev = parseFloat(prevEntry.score);
   const diff = Math.round((current - prev) * 10) / 10;
   if (diff >= 3) {
-    return `지난 ${prevEntry.date} 평가(${prevEntry.test})에서 ${prev}점이었는데 이번에 ${current}점으로 ${diff}점이나 올랐어요! 이 사이에 ${name}${subj} 얼마나 꾸준히 했는지 숫자로 딱 보이죠? 정말 대단해요! 이 페이스 그대로 이어가면 다음 평가에서도 좋은 결과 기대할 수 있을 거예요.`;
+    return `지난 ${prevEntry.date} 평가(${prevEntry.test})에서 ${prev}점이었는데 이번에 ${current}점으로 무려 ${diff}점이나 올랐어요! 이 사이에 ${name}${subj} 얼마나 꾸준히 했는지 숫자로 딱 보이죠? 정말 대단해요! 이 페이스 그대로 이어가면 다음 평가에서도 좋은 결과 기대할 수 있을 거예요.`;
   }
   if (diff <= -3) {
     return `이번에 지난 ${prevEntry.date} 평가보다 조금 낮게 나왔는데요(${prev}점 → ${current}점), 전체 실력이 떨어진 게 절대 아니에요. 이번 시험 범위에서 특정 영역이 아직 더 익힘이 필요한 시기인 거예요. 사실 지금은 완벽한 결과를 내기보다, 부족한 영역이 무엇인지 알고 다지고 가는 것이 정말 중요하잖아요. 영역별 성취도를 같이 보면 어디인지 바로 알 수 있어요. 같이 확인해볼게요!`;
@@ -518,7 +535,7 @@ function generateScript(parsed, studentNameRaw) {
 
   const durationComment = buildDurationComment(parsed.duration, sName, subj);
   const scoreLine = parsed.overallScore != null
-    ? `${sName}의 이번 종합 점수는 ${parsed.overallScore}점이에요.${parsed.totalCount != null ? ` ${parsed.totalCount}문항 중 ${parsed.correctCount}문항을 맞았어요.` : ""}`
+    ? `${sName}의 이번 종합 점수는 ${parsed.overallScore}점${copula("점", "eyo")}.${parsed.totalCount != null ? ` ${parsed.totalCount}문항 중 ${parsed.correctCount}문항을 맞았어요.` : ""}`
     : "종합 점수를 리포트에서 확인하지 못했습니다.";
 
   const prevEntry = findPrevSameTrack(parsed.history, parsed.track, parsed.testDate, parsed.overallScore);
@@ -533,7 +550,7 @@ function generateScript(parsed, studentNameRaw) {
 
   const band = getScoreBand(parsed.overallScore);
   const planText = band
-    ? `${SCORE_BAND_DESC[band]}이에요. ${STUDY_PLAN_TEXT[band](sName, subj)}`
+    ? STUDY_PLAN_TEXT[band](sName, subj)
     : "학습 계획을 안내하기 위한 종합 점수를 리포트에서 확인하지 못했습니다.";
 
   return `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
@@ -671,16 +688,29 @@ function renderParsedSummary(data) {
   box.innerHTML = html;
 }
 
-function renderScript() {
+let manualEdit = false;
+
+// 학생 이름 변경만으로는(수동 편집 중이 아닐 때) 스크립트 본문을 새로 생성해 채워 넣습니다.
+function updateScriptText() {
   const studentName = document.getElementById("studentName").value;
   const scriptBox = document.getElementById("scriptOutput");
+  if (!lastParsed) {
+    scriptBox.innerText = "학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.\n확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.";
+    return;
+  }
+  scriptBox.innerText = generateScript(lastParsed, studentName);
+}
+
+// forceRegenerate가 true면(새 리포트 확인 / 지우기 / 되돌리기) 교사의 수동 편집 내용을 덮어쓰고 새로 만듭니다.
+function renderScript(forceRegenerate) {
+  const studentName = document.getElementById("studentName").value;
   const strengthBox = document.getElementById("strengthBox");
   const planBox = document.getElementById("finalPlanBox");
 
   if (!lastParsed) {
-    scriptBox.textContent = "학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.\n확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.";
     strengthBox.classList.add("hidden");
     planBox.classList.add("hidden");
+    updateScriptText();
     return;
   }
 
@@ -703,12 +733,14 @@ function renderScript() {
     const c = SCORE_BAND_COLOR[band];
     planBox.classList.remove("hidden");
     planBox.className = `rounded-xl p-4 text-sm border ${c.bg} ${c.border} ${c.text}`;
-    planBox.innerHTML = `<b>🎯 최종 학습 계획 (종합점수 ${lastParsed.overallScore}점 · ${SCORE_BAND_LABEL[band]})</b><br>${STUDY_PLAN_TEXT[band](sName, josa(sName, "subject"))}`;
+    planBox.innerHTML = `<b>🎯 최종 학습 계획 (종합점수 ${lastParsed.overallScore}점 · ${SCORE_BAND_LABEL[band]})</b>
+      <div class="text-xs opacity-70 mt-0.5">${SCORE_BAND_DESC[band]}${copula(SCORE_BAND_DESC[band], "eyo")}.</div>
+      <div class="mt-1">${STUDY_PLAN_TEXT[band](sName, josa(sName, "subject"))}</div>`;
   } else {
     planBox.classList.add("hidden");
   }
 
-  scriptBox.textContent = generateScript(lastParsed, studentName);
+  if (forceRegenerate || !manualEdit) updateScriptText();
 }
 
 function renderLevelGuide() {
@@ -865,7 +897,9 @@ document.getElementById("btnClear").addEventListener("click", () => {
   document.getElementById("parseStatus").className = "text-xs text-slate-400 mt-2";
   document.getElementById("parsedSummary").innerHTML = `<p class="text-slate-400">리포트를 붙여넣고 확인하면 결과가 이곳에 표시됩니다.</p>`;
   lastParsed = null;
-  renderScript();
+  manualEdit = false;
+  document.getElementById("btnResetScript").classList.add("hidden");
+  renderScript(true);
 });
 
 document.getElementById("btnParse").addEventListener("click", () => {
@@ -884,7 +918,10 @@ document.getElementById("btnParse").addEventListener("click", () => {
   const nameInput = document.getElementById("studentName");
   if (!nameInput.value.trim() && data.studentName) nameInput.value = data.studentName;
 
-  renderScript();
+  // 새 리포트를 불러온 경우, 이전에 직접 수정한 내용이 있어도 새로 생성합니다.
+  manualEdit = false;
+  document.getElementById("btnResetScript").classList.add("hidden");
+  renderScript(true);
 
   const foundCount = [data.levelRaw, data.history.length, Object.keys(data.indicators).length, Object.keys(data.areas).length, data.diagnosisList.length].filter(Boolean).length;
   status.textContent = `리포트를 확인했어요 (${foundCount}/5개 항목 인식됨) — 항목이 비어 있다면 리포트 형식을 다시 확인해주세요.`;
@@ -897,10 +934,23 @@ document.getElementById("btnParse").addEventListener("click", () => {
   }
 });
 
-document.getElementById("studentName").addEventListener("input", renderScript);
+document.getElementById("studentName").addEventListener("input", () => renderScript(false));
+
+// 교사가 스크립트 결과창을 직접 클릭해 수정하면, 학생 이름 변경 등으로 자동 재생성되어
+// 수정 내용이 사라지지 않도록 표시해두고 [자동 생성 내용으로 되돌리기] 버튼을 보여줍니다.
+document.getElementById("scriptOutput").addEventListener("input", () => {
+  manualEdit = true;
+  document.getElementById("btnResetScript").classList.remove("hidden");
+});
+
+document.getElementById("btnResetScript").addEventListener("click", () => {
+  manualEdit = false;
+  document.getElementById("btnResetScript").classList.add("hidden");
+  updateScriptText();
+});
 
 document.getElementById("btnCopy").addEventListener("click", async () => {
-  const txt = document.getElementById("scriptOutput").textContent;
+  const txt = document.getElementById("scriptOutput").innerText;
   try {
     await navigator.clipboard.writeText(txt);
     showToast("스크립트가 복사되었습니다!");
