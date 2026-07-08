@@ -132,6 +132,11 @@
 
       <!-- 탭 패널: 레벨별 가이드 -->
       <div id="tabGuidePanel" class="hidden bg-white rounded-2xl shadow-sm border border-sky-100 p-5 flex-col gap-4">
+        <button onclick="openImgModal('로드맵표.png')" class="block group rounded-xl overflow-hidden border border-sky-200 bg-white hover:shadow-md transition">
+          <img src="로드맵표.png" alt="캐츠잉글리시 전체 로드맵표" loading="lazy"
+            class="w-full object-contain group-hover:scale-[1.02] transition"
+            onerror="this.closest('button').innerHTML='<div class=\'h-24 flex items-center justify-center text-xs text-slate-400 p-2 text-center\'>로드맵표 이미지를 찾을 수 없습니다</div>'">
+        </button>
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h3 class="font-extrabold text-sky-900">레벨 선택</h3>
           <select id="levelSelect" class="border border-sky-200 rounded-lg px-3 py-2 text-sm font-bold text-sky-700 focus:ring-2 focus:ring-sky-400 outline-none">
@@ -179,8 +184,6 @@
    - desc / indicators / target / duration 은 캐츠잉글리시 교사용 가이드에 기재된 공식 수치입니다.
    - images 배열은 현재 "영어 로드맵" 폴더에 있는 레벨별 안내 이미지 파일명입니다.
      이 HTML 파일이 해당 폴더 안에 함께 있어야 이미지가 정상적으로 보입니다.
-   - files 배열은 PDF/Word 예시 파일 자리입니다. path 값을 실제 파일의 상대경로로 바꿔주면
-     바로 다운로드/열람 버튼이 활성화됩니다. (교체 방법은 각 항목의 주석 참고)
 ----------------------------------------------------------------------------------------- */
 const LEVEL_DATA = {
   "Star Lv.1": {
@@ -191,11 +194,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "Pre A1", lexile: "10L-200L", ar: "0.4-1.3", tosel: "Pre-Starter 6-10급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Star Lv.1 안내 이미지 -->
     images: ["star Lv1_1.png", "star Lv1_2.png"],
-    // <!-- FILE_PLACEHOLDER: Star Lv.1 예시 파일. path를 실제 파일 상대경로로 교체 (예: "./files/star_lv1_guide.pdf") -->
-    files: [
-      { label: "Star Lv.1 학습 가이드", type: "pdf", path: "" },
-      { label: "Star Lv.1 예시 워크시트", type: "docx", path: "" },
-    ],
   },
   "Star Lv.2": {
     accent: "orange",
@@ -205,11 +203,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "Pre A1", lexile: "10L-350L", ar: "1.3-1.6", tosel: "Pre-Starter 1-5급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Star Lv.2 안내 이미지 -->
     images: ["star Lv2_1.png", "star Lv2_2.png"],
-    // <!-- FILE_PLACEHOLDER: Star Lv.2 예시 파일 -->
-    files: [
-      { label: "Star Lv.2 학습 가이드", type: "pdf", path: "" },
-      { label: "Star Lv.2 예시 워크시트", type: "docx", path: "" },
-    ],
   },
   "Galaxy Lv.1": {
     accent: "amber",
@@ -219,11 +212,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "A1", lexile: "110L-500L", ar: "1.6-2.0", tosel: "Starter 6-10급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.1 안내 이미지 -->
     images: ["galaxy Lv1_1.png", "galaxy Lv1_2.png", "galaxy Lv1_3.png"],
-    // <!-- FILE_PLACEHOLDER: Galaxy Lv.1 예시 파일 -->
-    files: [
-      { label: "Galaxy Lv.1 학습 가이드", type: "pdf", path: "" },
-      { label: "Galaxy Lv.1 예시 워크시트", type: "docx", path: "" },
-    ],
   },
   "Galaxy Lv.2": {
     accent: "lime",
@@ -233,11 +221,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "A1", lexile: "110L-500L", ar: "2.0-2.2", tosel: "Starter 1-5급", jet: "중급(3, 4급)" },
     // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.2 안내 이미지 -->
     images: ["galaxy Lv2_1.png", "galaxy Lv2_2.png", "galaxy Lv2_3.png"],
-    // <!-- FILE_PLACEHOLDER: Galaxy Lv.2 예시 파일 -->
-    files: [
-      { label: "Galaxy Lv.2 학습 가이드", type: "pdf", path: "" },
-      { label: "Galaxy Lv.2 예시 워크시트", type: "docx", path: "" },
-    ],
   },
   "Universe Lv.1": {
     accent: "emerald",
@@ -247,11 +230,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.2-2.9", tosel: "Basic 6-10급", jet: "중급(3, 4급)" },
     // <!-- IMAGE_PLACEHOLDER: Universe Lv.1 안내 이미지 -->
     images: ["universe lv1_1.png", "universe lv1_2.png", "universe lv1_3.png", "universe lv1_4.png"],
-    // <!-- FILE_PLACEHOLDER: Universe Lv.1 예시 파일 -->
-    files: [
-      { label: "Universe Lv.1 학습 가이드", type: "pdf", path: "" },
-      { label: "Universe Lv.1 예시 워크시트", type: "docx", path: "" },
-    ],
   },
   "Universe Lv.2": {
     accent: "teal",
@@ -261,11 +239,6 @@ const LEVEL_DATA = {
     indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.9-3.1", tosel: "Basic 1-5급", jet: "고급(1, 2급)" },
     // <!-- IMAGE_PLACEHOLDER: Universe Lv.2 안내 이미지 -->
     images: ["universe lv2_1.png", "universe lv2_2.png", "universe lv2_3.png", "universe lv2_4.png"],
-    // <!-- FILE_PLACEHOLDER: Universe Lv.2 예시 파일 -->
-    files: [
-      { label: "Universe Lv.2 학습 가이드", type: "pdf", path: "" },
-      { label: "Universe Lv.2 예시 워크시트", type: "docx", path: "" },
-    ],
   },
 };
 
@@ -810,28 +783,6 @@ function renderLevelGuide() {
   const panel = document.getElementById("levelGuidePanel");
   if (!d) { panel.innerHTML = ""; return; }
 
-  const filesHtml = d.files.map((f) => {
-    const icon = f.type === "pdf" ? "📄" : "📝";
-    if (f.path) {
-      return `<a href="${f.path}" target="_blank" class="flex items-center gap-3 rounded-xl border border-${d.accent}-200 bg-${d.accent}-50 hover:bg-${d.accent}-100 transition p-3">
-        <span class="text-2xl">${icon}</span>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-bold text-slate-700 truncate">${f.label}</div>
-          <div class="text-xs text-slate-400">${f.type.toUpperCase()} 파일 열기</div>
-        </div>
-        <span class="text-${d.accent}-500 font-bold text-sm">열기 ›</span>
-      </a>`;
-    }
-    return `<div class="flex items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 opacity-70 cursor-not-allowed"
-        title="소스 코드 내 LEVEL_DATA의 files.path 값을 실제 파일 경로로 지정하면 활성화됩니다.">
-      <span class="text-2xl grayscale">${icon}</span>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-bold text-slate-500 truncate">${f.label}</div>
-        <div class="text-xs text-slate-400">파일 미등록 · 경로를 연결해주세요</div>
-      </div>
-    </div>`;
-  }).join("");
-
   const imagesHtml = d.images.map((src) => `
     <button onclick="openImgModal('${src.replace(/'/g, "\\'")}')" class="group rounded-xl overflow-hidden border border-${d.accent}-200 bg-white hover:shadow-md transition">
       <img src="${encodeURI(src)}" alt="${key} 안내 이미지" loading="lazy"
@@ -859,9 +810,6 @@ function renderLevelGuide() {
 
     <div class="mb-2 text-sm font-extrabold text-slate-700">📷 레벨 안내 이미지</div>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5">${imagesHtml || `<span class="text-xs text-slate-400">등록된 이미지가 없습니다.</span>`}</div>
-
-    <div class="mb-2 text-sm font-extrabold text-slate-700">📁 단계별 예시 파일</div>
-    <div class="space-y-2">${filesHtml}</div>
   `;
 }
 
