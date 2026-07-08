@@ -108,12 +108,9 @@
         <div id="strengthBox" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800">
         </div>
 
-        <div id="finalPlanBox" class="hidden rounded-xl p-4 text-sm border">
-        </div>
-
         <div>
           <div class="flex items-center justify-between mb-2">
-            <h3 class="font-extrabold text-sky-900">완성된 상담 스크립트</h3>
+            <h3 class="font-extrabold text-sky-900">상담 스크립트</h3>
             <div class="flex items-center gap-2">
               <button id="btnResetScript" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 underline underline-offset-2">자동 생성 내용으로 되돌리기</button>
               <button id="btnCopy" class="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-extrabold rounded-lg px-3 py-2 transition">
@@ -633,34 +630,68 @@ function generateScript(parsed, studentNameRaw) {
   const areaSection = buildAreaSection(parsed.areas, parsed.diagnosisList, sName, subj);
 
   const planText = buildFinalPlan(parsed, sName, subj);
+  const band = getScoreBand(parsed.overallScore);
+  const planTitle = band ? `최종 학습 계획 · ${SCORE_BAND_LABEL[band]}` : "최종 학습 계획";
 
-  return `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
+  return {
+    greeting: `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
 
-이 평가는 ${sName}${subj} 그동안 학습한 내용이 얼마나 잘 쌓이고 있는지, 어떤 영역이 특히 잘 되고 있는지, 그리고 앞으로 더 신경 써주면 좋을 부분이 어딘지를 함께 확인하는 시간이에요.
-
-[종합 점수]
-${durationComment}
-${scoreLine}
-
-[누적 응시 기록]
-${trendComment}
-
-[공인 영어 레벨 예측 지표]
-${indicatorPara}
-
-[영역별 성취도]
-${areaSection}
-
-[최종 학습 계획]
-${planText}
-
-어머님, 오늘 꼼꼼히 살펴봐 주셔서 감사해요. 성취도평가는 앞으로도 정기적으로 진행되어서 ${sName}의 성장을 계속 함께 확인할 수 있어요. 지금 잘 하고 있는 부분은 더 자신감 갖게 해주고, 보완이 필요한 부분은 저도 라이브 클래스에서 더 신경 써드릴게요. ${sName}${subj} '나 영어 잘하고 있구나'라고 느낄 수 있도록 같이 만들어가요. 감사합니다!`;
+이 평가는 ${sName}${subj} 그동안 학습한 내용이 얼마나 잘 쌓이고 있는지, 어떤 영역이 특히 잘 되고 있는지, 그리고 앞으로 더 신경 써주면 좋을 부분이 어딘지를 함께 확인하는 시간이에요.`,
+    sections: [
+      { title: "종합 점수", body: `${durationComment}\n${scoreLine}` },
+      { title: "누적 응시 기록", body: trendComment },
+      { title: "공인 영어 레벨 예측 지표", body: indicatorPara },
+      { title: "영역별 성취도", body: areaSection },
+      { title: planTitle, body: planText },
+    ],
+    closing: `어머님, 오늘 꼼꼼히 살펴봐 주셔서 감사해요. 성취도평가는 앞으로도 정기적으로 진행되어서 ${sName}의 성장을 계속 함께 확인할 수 있어요. 지금 잘 하고 있는 부분은 더 자신감 갖게 해주고, 보완이 필요한 부분은 저도 라이브 클래스에서 더 신경 써드릴게요. ${sName}${subj} '나 영어 잘하고 있구나'라고 느낄 수 있도록 같이 만들어가요. 감사합니다!`,
+  };
 }
 
 /* -----------------------------------------------------------------------------------------
    5) 렌더링
+   generateScript()는 이제 { greeting, sections:[{title, body}], closing } 형태의 구조화된
+   데이터를 반환합니다. renderScriptOutput()이 이를 색상 블록 HTML로 변환해 #scriptOutput에
+   그려줍니다: 인사말/마무리 인사는 대칭되는 연한 하늘색 단색 블록(bg-sky-100)으로, 5개 데이터
+   섹션은 위→아래로 갈수록 점진적으로 깊어지는 하늘색→블루 파스텔 그라데이션으로 구획합니다.
+   (스크립트 복사 버튼은 #scriptOutput의 innerText를 사용하므로 블록 구조와 무관하게 항상
+   자연스러운 줄바꿈의 일반 텍스트로 복사됩니다.)
 ----------------------------------------------------------------------------------------- */
 let lastParsed = null;
+
+function escapeHtml(str) {
+  return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function textToHtml(str) {
+  return escapeHtml(str).split("\n").join("<br>");
+}
+
+const SCRIPT_SECTION_BG = [
+  "bg-gradient-to-b from-sky-50 to-sky-100",
+  "bg-gradient-to-b from-sky-100 to-blue-50",
+  "bg-gradient-to-b from-blue-50 to-blue-100",
+  "bg-gradient-to-b from-blue-100 to-indigo-50",
+  "bg-gradient-to-b from-indigo-50 to-indigo-100",
+];
+const SCRIPT_TITLE_BG = [
+  "bg-gradient-to-r from-sky-200 to-sky-100",
+  "bg-gradient-to-r from-sky-300 to-blue-100",
+  "bg-gradient-to-r from-blue-300 to-blue-100",
+  "bg-gradient-to-r from-blue-400 to-indigo-100",
+  "bg-gradient-to-r from-indigo-400 to-indigo-100",
+];
+const SCRIPT_TITLE_TEXT = ["text-sky-900", "text-sky-900", "text-blue-900", "text-blue-900", "text-indigo-900"];
+
+function renderScriptOutput(data) {
+  const greetingBlock = `<div class="bg-sky-100 rounded-xl p-4 leading-relaxed">${textToHtml(data.greeting)}</div>`;
+  const closingBlock = `<div class="bg-sky-100 rounded-xl p-4 leading-relaxed mt-3">${textToHtml(data.closing)}</div>`;
+  const sectionsHtml = data.sections.map((s, i) => `
+    <div class="rounded-xl overflow-hidden border border-sky-100 mt-3">
+      <div class="${SCRIPT_TITLE_BG[i]} px-4 py-2"><span class="font-extrabold text-sm ${SCRIPT_TITLE_TEXT[i]}">${escapeHtml(s.title)}</span></div>
+      <div class="${SCRIPT_SECTION_BG[i]} px-4 py-3 leading-relaxed">${textToHtml(s.body)}</div>
+    </div>`).join("");
+  return `${greetingBlock}${sectionsHtml}${closingBlock}`;
+}
 
 function renderParsedSummary(data) {
   const box = document.getElementById("parsedSummary");
@@ -778,26 +809,23 @@ function updateScriptText() {
   const studentName = document.getElementById("studentName").value;
   const scriptBox = document.getElementById("scriptOutput");
   if (!lastParsed) {
-    scriptBox.innerText = "학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.\n확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.";
+    scriptBox.innerHTML = `<div class="bg-sky-100 rounded-xl p-4 leading-relaxed">학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.<br>확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.</div>`;
     return;
   }
-  scriptBox.innerText = generateScript(lastParsed, studentName);
+  scriptBox.innerHTML = renderScriptOutput(generateScript(lastParsed, studentName));
 }
 
 // forceRegenerate가 true면(새 리포트 확인 / 지우기 / 되돌리기) 교사의 수동 편집 내용을 덮어쓰고 새로 만듭니다.
 function renderScript(forceRegenerate) {
   const studentName = document.getElementById("studentName").value;
   const strengthBox = document.getElementById("strengthBox");
-  const planBox = document.getElementById("finalPlanBox");
 
   if (!lastParsed) {
     strengthBox.classList.add("hidden");
-    planBox.classList.add("hidden");
     updateScriptText();
     return;
   }
 
-  const sName = withName(studentName || lastParsed.studentName);
   const strengthInfo = getStrengthAreas(lastParsed.areas);
 
   // 강점 영역 박스
@@ -814,20 +842,6 @@ function renderScript(forceRegenerate) {
   } else {
     strengthBox.className = "bg-sky-50 border border-sky-200 rounded-xl p-4 text-sm text-sky-800";
     strengthBox.innerHTML = `<b>ℹ️ 강점 영역</b> · 영역별 성취도 정보를 확인하지 못했습니다.`;
-  }
-
-  // 최종 학습 계획 박스
-  const band = getScoreBand(lastParsed.overallScore);
-  if (band) {
-    const c = SCORE_BAND_COLOR[band];
-    const weakNames = band !== "high" ? getWeakAreaNames(lastParsed.areas, 2) : [];
-    planBox.classList.remove("hidden");
-    planBox.className = `rounded-xl p-4 text-sm border ${c.bg} ${c.border} ${c.text}`;
-    planBox.innerHTML = `<b>🎯 최종 학습 계획 (종합점수 ${lastParsed.overallScore}점 · ${SCORE_BAND_LABEL[band]})</b>
-      <div class="text-xs opacity-70 mt-0.5">${SCORE_BAND_DESC[band]}${copula(SCORE_BAND_DESC[band], "eyo")}.${weakNames.length ? ` 실시간 확인된 취약 영역: ${weakNames.join("·")}` : ""}</div>
-      <div class="mt-1 whitespace-pre-line">${buildFinalPlan(lastParsed, sName, josa(sName, "subject"))}</div>`;
-  } else {
-    planBox.classList.add("hidden");
   }
 
   if (forceRegenerate || !manualEdit) updateScriptText();
