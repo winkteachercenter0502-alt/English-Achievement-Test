@@ -132,8 +132,8 @@
 
       <!-- 탭 패널: 레벨별 가이드 -->
       <div id="tabGuidePanel" class="hidden bg-white rounded-2xl shadow-sm border border-sky-100 p-5 flex-col gap-4">
-        <button onclick="openImgModal('로드맵표.png')" class="block group rounded-xl overflow-hidden border border-sky-200 bg-white hover:shadow-md transition">
-          <img src="로드맵표.png" alt="캐츠잉글리시 전체 로드맵표" loading="lazy"
+        <button onclick="openImgModal('roadmap_table.png')" class="block group rounded-xl overflow-hidden border border-sky-200 bg-white hover:shadow-md transition">
+          <img src="roadmap_table.png" alt="캐츠잉글리시 전체 로드맵표" loading="lazy"
             class="w-full object-contain group-hover:scale-[1.02] transition"
             onerror="this.closest('button').innerHTML='<div class=\'h-24 flex items-center justify-center text-xs text-slate-400 p-2 text-center\'>로드맵표 이미지를 찾을 수 없습니다</div>'">
         </button>
@@ -193,7 +193,7 @@ const LEVEL_DATA = {
     duration: "40분",
     indicators: { cefr: "Pre A1", lexile: "10L-200L", ar: "0.4-1.3", tosel: "Pre-Starter 6-10급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Star Lv.1 안내 이미지 -->
-    images: ["star Lv1_1.png", "star Lv1_2.png"],
+    images: ["roadmap_star_lv1.jpg"],
   },
   "Star Lv.2": {
     accent: "orange",
@@ -202,7 +202,7 @@ const LEVEL_DATA = {
     duration: "40분",
     indicators: { cefr: "Pre A1", lexile: "10L-350L", ar: "1.3-1.6", tosel: "Pre-Starter 1-5급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Star Lv.2 안내 이미지 -->
-    images: ["star Lv2_1.png", "star Lv2_2.png"],
+    images: ["roadmap_star_lv2.jpg"],
   },
   "Galaxy Lv.1": {
     accent: "amber",
@@ -211,7 +211,7 @@ const LEVEL_DATA = {
     duration: "40분",
     indicators: { cefr: "A1", lexile: "110L-500L", ar: "1.6-2.0", tosel: "Starter 6-10급", jet: "초급(5, 6급)" },
     // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.1 안내 이미지 -->
-    images: ["galaxy Lv1_1.png", "galaxy Lv1_2.png", "galaxy Lv1_3.png"],
+    images: ["roadmap_galaxy_lv1.jpg"],
   },
   "Galaxy Lv.2": {
     accent: "lime",
@@ -220,7 +220,7 @@ const LEVEL_DATA = {
     duration: "40분",
     indicators: { cefr: "A1", lexile: "110L-500L", ar: "2.0-2.2", tosel: "Starter 1-5급", jet: "중급(3, 4급)" },
     // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.2 안내 이미지 -->
-    images: ["galaxy Lv2_1.png", "galaxy Lv2_2.png", "galaxy Lv2_3.png"],
+    images: ["roadmap_galaxy_lv2.jpg"],
   },
   "Universe Lv.1": {
     accent: "emerald",
@@ -229,7 +229,7 @@ const LEVEL_DATA = {
     duration: "50분",
     indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.2-2.9", tosel: "Basic 6-10급", jet: "중급(3, 4급)" },
     // <!-- IMAGE_PLACEHOLDER: Universe Lv.1 안내 이미지 -->
-    images: ["universe lv1_1.png", "universe lv1_2.png", "universe lv1_3.png", "universe lv1_4.png"],
+    images: ["roadmap_universe_lv1.jpg"],
   },
   "Universe Lv.2": {
     accent: "teal",
@@ -238,7 +238,7 @@ const LEVEL_DATA = {
     duration: "50분",
     indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.9-3.1", tosel: "Basic 1-5급", jet: "고급(1, 2급)" },
     // <!-- IMAGE_PLACEHOLDER: Universe Lv.2 안내 이미지 -->
-    images: ["universe lv2_1.png", "universe lv2_2.png", "universe lv2_3.png", "universe lv2_4.png"],
+    images: ["roadmap_universe_lv2.jpg"],
   },
 };
 
@@ -464,6 +464,18 @@ function getStrengthAreas(areas) {
   return { mode: "absolute", items };
 }
 
+// [최종 학습 계획]의 중상/중하/하 구간에서 쓸 취약 영역을 실시간으로 추출합니다.
+// 평균 정답률 이하인 영역이 있으면 그중 최대 max개(정답률 낮은 순), 없으면 전체 중 가장 낮은 max개를 반환합니다.
+function getWeakAreaNames(areas, max) {
+  max = max || 2;
+  const entries = AREA_NAMES.map((n) => (areas[n] ? { name: n, ...areas[n] } : null)).filter((e) => e && e.curRate != null);
+  if (!entries.length) return [];
+  const sorted = [...entries].sort((a, b) => a.curRate - b.curRate);
+  const avg = entries.reduce((sum, e) => sum + e.curRate, 0) / entries.length;
+  const belowAvg = sorted.filter((e) => e.curRate <= avg);
+  return (belowAvg.length ? belowAvg : sorted).slice(0, max).map((e) => e.name);
+}
+
 /* -----------------------------------------------------------------------------------------
    4) generateScript() : 확인된 데이터 → 상담 스크립트 문자열
    교사용 가이드(5-2. 실제 상담 예시)의 문단 구성과 어조를 그대로 따르며, [ ] 로 표시된 구간에는
@@ -518,7 +530,7 @@ function buildAreaSection(areas, diagnosisList, name, subj) {
     }
     if (declined.length) {
       const names = declined.map((e) => e.name).join(", ");
-      lines.push(`더 채워가면 좋을 영역: ${names} 영역은 이전보다 정답률이 다소 낮아졌어요. 한 번의 평가로 실력이 떨어진 게 아니라, 이 시기에 조금 더 채워가면 좋을 부분으로 봐주시면 좋을 것 같아요.`);
+      lines.push(`더 채워가면 좋을 영역(필요 시 스케줄 조정): ${names} 영역은 이전보다 정답률이 다소 낮아졌어요. 한 번의 평가로 실력이 떨어진 게 아니라, 이 시기에 조금 더 채워가면 좋을 부분으로 봐주시면 좋을 것 같아요.`);
     }
   } else {
     // 이전 응시 기록이 전혀 없는 경우(첫 응시 등)에는 현재 정답률만으로 강점/보완 영역을 안내합니다.
@@ -530,7 +542,7 @@ function buildAreaSection(areas, diagnosisList, name, subj) {
     lines.push(`잘 하고 있는 영역: 이번 응시 기준으로 ${topNames} 영역의 정답률이 가장 높았어요.`);
     if (bottom.length) {
       const bottomNames = bottom.map((e) => `${e.name}(${e.curRate}%)`).join(", ");
-      lines.push(`더 채워가면 좋을 영역: ${bottomNames} 영역은 상대적으로 정답률이 낮은 편이라, 다음 학습에서 조금 더 채워가면 좋을 것 같아요.`);
+      lines.push(`더 채워가면 좋을 영역(필요 시 스케줄 조정): ${bottomNames} 영역은 상대적으로 정답률이 낮은 편이라, 다음 학습에서 조금 더 채워가면 좋을 것 같아요.`);
     }
   }
 
@@ -542,12 +554,59 @@ function buildAreaSection(areas, diagnosisList, name, subj) {
   return lines.join("\n");
 }
 
-const STUDY_PLAN_TEXT = {
-  high: (n, subj) => `이번 결과가 아주 좋았어요! ${n}${subj} 학습 내용을 차곡차곡 내 것으로 만들며 성장하고 있어요. 지금 학습 패턴 그대로 자신 있게 다음 단계로 나아가도 될 것 같아요.^^`,
-  midHigh: (n) => `전반적으로 학습이 잘 이루어지고 있어서 지금 레벨이 ${n}에게 잘 맞고 있어요~ 보완이 필요한 영역만 조금 더 신경 써주면 되는데요, 영어는 한 번에 결과가 나오는 게 아니라 꾸준히 쌓인 다음에 전체 영역에서 한꺼번에 나타나거든요. 지금처럼 꾸준히 쌓아가면 다음 평가에서는 점수로 분명히 나타날 거예요.`,
-  midLow: (n) => `현재 학습 내용을 충분히 익혀가는 중인데 이건 학습 과정에서 자연스러운 단계예요. 지금은 한 번 더 반복해서 완전히 내 것으로 만드는 시간이 필요한 시기예요. 지금 레벨에서 기초를 탄탄히 다진 후 다음 평가에 재도전하면 더욱 성장한 결과를 함께 볼 수 있을 거예요.`,
-  low: (n) => `현재 학습 범위의 내용이 아직 충분히 체화되지 않은 상태로 보여요. 급하게 다음 단계로 나아가기보다, 지금 레벨의 기초부터 차근차근 다시 다지는 시간이 필요해요. 코스북과 리딩 학습에서 부족한 영역을 반복 학습하며 기초를 채워가면, 다음 평가에서는 훨씬 안정된 결과를 볼 수 있을 거예요.`,
-};
+/* -----------------------------------------------------------------------------------------
+   [최종 학습 계획] 점수 구간별 완전 분기 로직
+   - 상 구간(90~100점): 가정 학습 시간/스케줄 질문을 완전히 생략하고, 리포트에서 확인된 레벨 가이드
+     (LEVEL_DATA[level].desc)를 근거로 구체적인 학습 성취를 극찬하는 흐름으로만 구성합니다.
+   - 중상/중하/하 구간(0~89점): 가정 내 학습 시간·태도를 확인하는 양방향 질문을 넣고, 결론부에는
+     getWeakAreaNames()로 실시간 추출한 취약 영역명(예: "쓰기·문법")을 대본에 그대로 결합합니다.
+     세 밴드 모두 공통 질문 흐름을 쓰고, 결론 문단만 밴드별로 달라집니다.
+----------------------------------------------------------------------------------------- */
+function buildFinalPlan(parsed, sName, subj) {
+  const intro = `이번 성취도 평가를 통해 ${sName}${subj} 잘 하고 있는 부분과 앞으로 더 키워줄 부분을 확인했는데요~ 이걸 바탕으로 다음 학습 방향을 안내해 드릴게요.`;
+
+  const band = getScoreBand(parsed.overallScore);
+  if (!band) return "학습 계획을 안내하기 위한 종합 점수를 리포트에서 확인하지 못했습니다.";
+
+  const level = parsed.levelRaw || "현재 레벨";
+  const levelInfo = LEVEL_DATA[parsed.levelRaw];
+  const ind = parsed.indicators || {};
+
+  if (band === "high") {
+    const desc = levelInfo ? levelInfo.desc : "";
+    return `${intro}
+
+리포트를 보니 이번 ${level} 영역에서 다룬 교재 내용을 아주 훌륭하게 마스터했더라고요, 어머님!${desc ? ` ${desc}` : ""} 공인 지표상으로도 CEFR ${ind.cefr || "-"} 수준의 읽기 단계와 의사소통 표현 능력을 차곡차곡 내 것으로 만들며 성장하고 있어요.
+
+이번 결과가 아주 좋았기 때문에, 다음 차시로 순조롭게 진행하면 됩니다! ${sName}${subj} 지금 학습 패턴 그대로 자신 있게 다음 단계로 나아가서 더 넓은 영어의 재미를 느낄 수 있도록 제가 라이브 클래스에서도 칭찬 많이 해주고 든든하게 이끌어 갈게요. 지금처럼 든든하게 믿고 응원해 주세요, 어머님!^^`;
+  }
+
+  // 중상 / 중하 / 하 구간 공통 질문 흐름
+  const weakNames = getWeakAreaNames(parsed.areas, 2);
+  const weakPhrase = weakNames.length ? `${weakNames.join("·")} 영역` : "일부 영역";
+  const roadmapPhrase = (parsed.diagnosisList && parsed.diagnosisList[0])
+    ? parsed.diagnosisList[0].replace(/[.]$/, "")
+    : (levelInfo ? levelInfo.desc.replace(/[.]$/, "") : `${level} 학습 범위`);
+
+  const opening = `${intro}
+
+리포트를 보니 특히 이번에 ${roadmapPhrase} 전반을 완전히 내 것으로 익히는 데 조금 더 시간이 필요한 단계로 확인되었어요. 그래서 무리하게 다음 진도를 나가기보다, 지금 레벨에서 부족한 영역을 차근차근 반복하며 다져주는 것이 정말 중요합니다.
+
+이를 위해서 제가 몇 가지 여쭤보고 싶은데요, 어머님! 혹시 ${sName}${subj} 요즘 평소에 집에서 학습할 때 어떤 모습인가요? 평소 학습을 어떤 식으로 진행하고 있는지, 혹시 조금 지루해하거나 어려워하는 기색은 없었는지 궁금해요. 그리고 보통 하원하거나 학교 끝나고 집에 오면 몇 시쯤 될까요? 구체적으로 매일 캐츠잉글리시 학습에 집중할 수 있는 시간대가 언제인지 확인해 주시면, 제가 그 학습 환경에 맞춰서 부담 느끼지 않게 학습 스케줄과 진도를 아주 세밀하게 조정해 드리려고 합니다.`;
+
+  let conclusion;
+  if (band === "midHigh") {
+    conclusion = `전반적으로 학습이 잘 이루어지고 있어서 지금 레벨이 ${sName}에게 잘 맞고 있어요~ ${weakPhrase}만 조금 더 신경 써주면 되는데요~ 영어는 한 번에 결과가 나오는 게 아니라 꾸준히 쌓인 다음에 전체 영역에서 한꺼번에 나타나거든요. 지금 이 부분이 약하다고 해서 학습이 안 되고 있는 게 아니에요. 코스북을 통해 전 영역을 계속 짚고 있고, 캐츠잉글리시 각 영역별 학습으로 매일 꾸준히 쌓아가고 있으니까 다음 평가에서는 점수로 분명히 나타날 거예요.`;
+  } else if (band === "midLow") {
+    conclusion = `학습이 꾸준히 쌓여가고는 있지만, 지금은 배운 내용을 완전히 내 것으로 만들기 위해 한 번 더 다지는 시간이 필요한 시기예요. 특히 ${weakPhrase}은 조금 더 반복 학습이 필요해 보이는데요, 조급해하지 않고 이 부분 위주로 보강과 진도 조정을 병행하면 확실히 자리를 잡아갈 거예요. 지금처럼 다져둔 기초가 다음 평가에서는 안정된 점수로 이어질 거예요.`;
+  } else {
+    conclusion = `현재 학습 내용을 충분히 익혀가는 중인데 이건 학습 과정에서 자연스러운 단계예요. 지금 ${sName}한테는 한번 더 반복해서 완전히 내 것으로 만드는 시간이 필요한 시기인 거거든요. 이번 기회에 부족했던 ${weakPhrase}별 보강과 진도 조정을 병행하면서 기초를 탄탄히 다진 후 다음 평가에 재도전하면 ${sName}${subj} 더욱 성장한 결과를 같이 볼 수 있을 거예요!`;
+  }
+
+  return `${opening}
+
+${conclusion}`;
+}
 
 function generateScript(parsed, studentNameRaw) {
   const sName = withName(studentNameRaw || parsed.studentName);
@@ -560,7 +619,7 @@ function generateScript(parsed, studentNameRaw) {
 
   const durationComment = buildDurationComment(parsed.duration, sName, subj);
   const scoreLine = parsed.overallScore != null
-    ? `${sName}의 이번 종합 점수는 ${parsed.overallScore}점${copula("점", "eyo")}.${parsed.totalCount != null ? ` ${parsed.totalCount}문항 중 ${parsed.correctCount}문항을 맞았어요.` : ""}`
+    ? `${sName}의 이번 종합 점수는 ${parsed.overallScore}점${copula("점", "eyo")}.${parsed.totalCount != null ? ` ${parsed.totalCount}문항 중 ${parsed.correctCount}문항을 맞혔어요.` : ""}`
     : "종합 점수를 리포트에서 확인하지 못했습니다.";
 
   const prevEntry = findPrevSameTrack(parsed.history, parsed.track, parsed.testDate, parsed.overallScore);
@@ -573,10 +632,7 @@ function generateScript(parsed, studentNameRaw) {
 
   const areaSection = buildAreaSection(parsed.areas, parsed.diagnosisList, sName, subj);
 
-  const band = getScoreBand(parsed.overallScore);
-  const planText = band
-    ? STUDY_PLAN_TEXT[band](sName, subj)
-    : "학습 계획을 안내하기 위한 종합 점수를 리포트에서 확인하지 못했습니다.";
+  const planText = buildFinalPlan(parsed, sName, subj);
 
   return `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
 
@@ -764,11 +820,12 @@ function renderScript(forceRegenerate) {
   const band = getScoreBand(lastParsed.overallScore);
   if (band) {
     const c = SCORE_BAND_COLOR[band];
+    const weakNames = band !== "high" ? getWeakAreaNames(lastParsed.areas, 2) : [];
     planBox.classList.remove("hidden");
     planBox.className = `rounded-xl p-4 text-sm border ${c.bg} ${c.border} ${c.text}`;
     planBox.innerHTML = `<b>🎯 최종 학습 계획 (종합점수 ${lastParsed.overallScore}점 · ${SCORE_BAND_LABEL[band]})</b>
-      <div class="text-xs opacity-70 mt-0.5">${SCORE_BAND_DESC[band]}${copula(SCORE_BAND_DESC[band], "eyo")}.</div>
-      <div class="mt-1">${STUDY_PLAN_TEXT[band](sName, josa(sName, "subject"))}</div>`;
+      <div class="text-xs opacity-70 mt-0.5">${SCORE_BAND_DESC[band]}${copula(SCORE_BAND_DESC[band], "eyo")}.${weakNames.length ? ` 실시간 확인된 취약 영역: ${weakNames.join("·")}` : ""}</div>
+      <div class="mt-1 whitespace-pre-line">${buildFinalPlan(lastParsed, sName, josa(sName, "subject"))}</div>`;
   } else {
     planBox.classList.add("hidden");
   }
