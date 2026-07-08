@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>캐츠잉글리시 | 성취도평가 상담 스크립트 생성기</title>
+
+<!-- Tailwind CSS (Play CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- 나눔스퀘어 네오 (NanumSquareNeo) 웹폰트 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquareNeo@1.0/nanumsquareneo.css">
+
+<style>
+  html, body { font-family: 'NanumSquareNeo', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+  .font-bold, .font-extrabold, .font-black, h1, h2, h3, .nsq-eb { font-family: 'NanumSquareNeo', 'Malgun Gothic', sans-serif; font-weight: 800; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #7dd3fc; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+  .scroll-panel { scrollbar-width: thin; scrollbar-color: #7dd3fc transparent; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn .25s ease-out; }
+
+  .tab-btn { transition: all .15s ease; }
+  .tab-btn.active { background: #0ea5e9; color: #fff; box-shadow: 0 4px 14px -4px rgba(14,165,233,.5); }
+  .tab-btn:not(.active) { background: #f0f9ff; color: #0369a1; }
+  .tab-btn:not(.active):hover { background: #e0f2fe; }
+
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.25rem .6rem; border-radius:9999px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+
+  textarea { resize: vertical; }
+
+  .toast { transition: opacity .25s ease, transform .25s ease; }
+</style>
+</head>
+
+<body class="bg-sky-50 min-h-screen text-slate-800">
+
+  <!-- ============================= HEADER ============================= -->
+  <header class="bg-gradient-to-r from-sky-600 to-sky-500 shadow-md">
+    <div class="max-w-[1400px] mx-auto px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl">📘</div>
+        <div>
+          <h1 class="text-white text-lg sm:text-xl font-extrabold leading-tight">캐츠잉글리시 성취도평가 상담 스크립트 생성기</h1>
+          <p class="text-sky-100 text-xs sm:text-sm">교사용 · 리포트 붙여넣기 한 번으로 상담 스크립트 완성</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
+        <label class="text-sky-50 text-xs sm:text-sm font-bold whitespace-nowrap">학생 이름</label>
+        <input id="studentName" type="text" placeholder="리포트를 불러오면 자동 입력돼요"
+          class="w-40 sm:w-48 rounded-lg px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 border-0 focus:ring-2 focus:ring-white outline-none">
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================= MAIN ============================= -->
+  <main class="max-w-[1400px] mx-auto px-5 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- ============================= LEFT COLUMN ============================= -->
+    <section class="flex flex-col gap-5">
+
+      <!-- 리포트 붙여넣기 카드 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-sky-100 p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-extrabold text-sky-900 flex items-center gap-2"><span class="text-sky-500">①</span> 리포트 내용 붙여넣기</h2>
+          <button id="btnSample" class="text-xs font-bold text-sky-600 hover:text-sky-800 underline underline-offset-2">예시 리포트 불러오기</button>
+        </div>
+        <textarea id="reportInput" rows="9" placeholder="캐츠잉글리시 시스템에서 학생 성취도평가 리포트 화면 전체를 마우스로 드래그하여 그대로 붙여넣어 주세요 (Ctrl+V)."
+          class="w-full text-sm border border-sky-200 rounded-xl p-3 focus:ring-2 focus:ring-sky-400 outline-none placeholder-slate-400"></textarea>
+        <div class="flex items-center gap-2 mt-3">
+          <button id="btnParse" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-extrabold rounded-xl py-2.5 shadow-sm transition">
+            리포트 확인하기 →
+          </button>
+          <button id="btnClear" class="px-4 py-2.5 rounded-xl border border-sky-200 text-sky-600 font-bold hover:bg-sky-50 transition text-sm">지우기</button>
+        </div>
+        <p id="parseStatus" class="text-xs text-slate-400 mt-2">아직 불러온 리포트가 없습니다.</p>
+      </div>
+
+      <!-- 리포트 확인 결과 카드 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-sky-100 p-5 flex-1">
+        <h2 class="font-extrabold text-sky-900 flex items-center gap-2 mb-4"><span class="text-sky-500">②</span> 리포트 확인 결과</h2>
+        <div id="parsedSummary" class="space-y-5 text-sm">
+          <p class="text-slate-400">리포트를 붙여넣고 확인하면 결과가 이곳에 표시됩니다.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================= RIGHT COLUMN ============================= -->
+    <section class="flex flex-col gap-4">
+
+      <!-- 탭 메뉴 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-sky-100 p-1.5 flex gap-1.5">
+        <button id="tabScriptBtn" class="tab-btn active flex-1 rounded-xl py-2.5 font-extrabold text-sm">① 실시간 상담 스크립트</button>
+        <button id="tabGuideBtn" class="tab-btn flex-1 rounded-xl py-2.5 font-extrabold text-sm">② 레벨별 로드맵 및 예시 파일 가이드</button>
+      </div>
+
+      <!-- 탭 패널: 상담 스크립트 -->
+      <div id="tabScriptPanel" class="bg-white rounded-2xl shadow-sm border border-sky-100 p-5 flex flex-col gap-4">
+
+        <div id="strengthBox" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800">
+        </div>
+
+        <div id="finalPlanBox" class="hidden rounded-xl p-4 text-sm border">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-extrabold text-sky-900">완성된 상담 스크립트</h3>
+            <button id="btnCopy" class="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-extrabold rounded-lg px-3 py-2 transition">
+              📋 스크립트 복사하기
+            </button>
+          </div>
+          <div id="scriptOutput" class="whitespace-pre-wrap text-sm leading-relaxed bg-sky-50 border border-sky-100 rounded-xl p-4 min-h-[260px] scroll-panel">
+학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.
+확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭 패널: 레벨별 가이드 -->
+      <div id="tabGuidePanel" class="hidden bg-white rounded-2xl shadow-sm border border-sky-100 p-5 flex-col gap-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="font-extrabold text-sky-900">레벨 선택</h3>
+          <select id="levelSelect" class="border border-sky-200 rounded-lg px-3 py-2 text-sm font-bold text-sky-700 focus:ring-2 focus:ring-sky-400 outline-none">
+            <!-- options injected by JS -->
+          </select>
+        </div>
+        <div id="levelGuidePanel" class="scroll-panel overflow-y-auto pr-1" style="max-height: 640px;">
+          <!-- injected by JS -->
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="max-w-[1400px] mx-auto px-5 pb-8 pt-2 text-center text-xs text-slate-400">
+    캐츠잉글리시 교사용 내부 도구 · 모든 데이터는 브라우저 내에서만 처리되며 서버로 전송되지 않습니다.
+  </footer>
+
+  <!-- 이미지 확대 모달 -->
+  <div id="imgModal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-6" onclick="closeImgModal(event)">
+    <img id="imgModalSrc" src="" class="max-w-full max-h-full rounded-xl shadow-2xl">
+  </div>
+
+  <!-- 토스트 -->
+  <div id="toast" class="toast fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg opacity-0 pointer-events-none">
+    복사되었습니다!
+  </div>
+
+<script>
+/* =========================================================================================
+   캐츠잉글리시 성취도평가 상담 스크립트 생성기
+   -----------------------------------------------------------------------------------------
+   구성
+   1) LEVEL_DATA          : 레벨별 기본 정보 + 예시 이미지/파일 매칭 데이터베이스
+   2) parseReport()        : 리포트 원문 텍스트 → 구조화된 데이터로 정규식 인식
+   3) 파생 로직            : 종합점수 등급 판정 / 강점 영역 판별 / 조사(이가,은는,을를) 처리
+   4) generateScript()     : 확인된 데이터 → 상담 스크립트 문자열 생성 (교사 가이드의 실제 상담
+                             예시와 동일한 형식을 사용합니다)
+   5) 렌더링 함수           : 확인 결과 카드 / 스크립트 / 레벨 가이드 탭 렌더링
+   6) 이벤트 바인딩
+   ========================================================================================= */
+
+/* -----------------------------------------------------------------------------------------
+   1) 레벨별 기본 정보 데이터베이스 (교사용 가이드 문서 기준)
+   - desc / indicators / target / duration 은 캐츠잉글리시 교사용 가이드에 기재된 공식 수치입니다.
+   - images 배열은 현재 "영어 로드맵" 폴더에 있는 레벨별 안내 이미지 파일명입니다.
+     이 HTML 파일이 해당 폴더 안에 함께 있어야 이미지가 정상적으로 보입니다.
+   - files 배열은 PDF/Word 예시 파일 자리입니다. path 값을 실제 파일의 상대경로로 바꿔주면
+     바로 다운로드/열람 버튼이 활성화됩니다. (교체 방법은 각 항목의 주석 참고)
+----------------------------------------------------------------------------------------- */
+const LEVEL_DATA = {
+  "Star Lv.1": {
+    accent: "rose",
+    desc: "캐츠 레벨 Star Lv.1은 영어를 처음 접하는 학습자부터 초등 1, 2학년 수준의 학습자가 파닉스와 기초 단어, 표현 학습을 통해 영어의 소리와 문자에 대한 감각을 형성할 수 있습니다.",
+    target: "영어 학습 1년 미만, 예비초~초등 1학년 수준 코스북 Lv.1을 학습 중인 학습자",
+    duration: "40분",
+    indicators: { cefr: "Pre A1", lexile: "10L-200L", ar: "0.4-1.3", tosel: "Pre-Starter 6-10급", jet: "초급(5, 6급)" },
+    // <!-- IMAGE_PLACEHOLDER: Star Lv.1 안내 이미지 -->
+    images: ["star Lv1_1.png", "star Lv1_2.png"],
+    // <!-- FILE_PLACEHOLDER: Star Lv.1 예시 파일. path를 실제 파일 상대경로로 교체 (예: "./files/star_lv1_guide.pdf") -->
+    files: [
+      { label: "Star Lv.1 학습 가이드", type: "pdf", path: "" },
+      { label: "Star Lv.1 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+  "Star Lv.2": {
+    accent: "orange",
+    desc: "캐츠 레벨 Star Lv.2는 초등 1, 2학년 수준의 학습자가 기초 표현과 단어를 익히고, 짧고 간단한 문장을 반복적으로 듣고 말하며 영어 문장의 기본 형태에 익숙해질 수 있습니다.",
+    target: "영어 학습 1-2년차, 초등 2학년 수준 코스북 Lv.2를 학습 중인 학습자",
+    duration: "40분",
+    indicators: { cefr: "Pre A1", lexile: "10L-350L", ar: "1.3-1.6", tosel: "Pre-Starter 1-5급", jet: "초급(5, 6급)" },
+    // <!-- IMAGE_PLACEHOLDER: Star Lv.2 안내 이미지 -->
+    images: ["star Lv2_1.png", "star Lv2_2.png"],
+    // <!-- FILE_PLACEHOLDER: Star Lv.2 예시 파일 -->
+    files: [
+      { label: "Star Lv.2 학습 가이드", type: "pdf", path: "" },
+      { label: "Star Lv.2 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+  "Galaxy Lv.1": {
+    accent: "amber",
+    desc: "캐츠 Galaxy Lv.1은 초등 3, 4학년 수준의 학습자가 일상적인 주제의 글을 읽고 의미를 이해하며, 짧은 문장으로 말하고 쓰는 연습을 통해 기초적인 의사소통 능력을 확장할 수 있습니다.",
+    target: "영어 학습 2-3년차, 초등 3학년 수준 코스북 Lv.3을 학습 중인 학습자",
+    duration: "40분",
+    indicators: { cefr: "A1", lexile: "110L-500L", ar: "1.6-2.0", tosel: "Starter 6-10급", jet: "초급(5, 6급)" },
+    // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.1 안내 이미지 -->
+    images: ["galaxy Lv1_1.png", "galaxy Lv1_2.png", "galaxy Lv1_3.png"],
+    // <!-- FILE_PLACEHOLDER: Galaxy Lv.1 예시 파일 -->
+    files: [
+      { label: "Galaxy Lv.1 학습 가이드", type: "pdf", path: "" },
+      { label: "Galaxy Lv.1 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+  "Galaxy Lv.2": {
+    accent: "lime",
+    desc: "캐츠 레벨 Galaxy Lv.2는 초등 3, 4학년 수준의 학습자가 패턴 중심의 표현을 활용해 자신의 경험과 생각을 짧은 문장으로 말하고 쓰며, 기본적인 의사소통 능력을 강화할 수 있습니다.",
+    target: "영어 학습 3-4년차, 초등 4학년 수준 코스북 Lv.4를 학습 중인 학습자",
+    duration: "40분",
+    indicators: { cefr: "A1", lexile: "110L-500L", ar: "2.0-2.2", tosel: "Starter 1-5급", jet: "중급(3, 4급)" },
+    // <!-- IMAGE_PLACEHOLDER: Galaxy Lv.2 안내 이미지 -->
+    images: ["galaxy Lv2_1.png", "galaxy Lv2_2.png", "galaxy Lv2_3.png"],
+    // <!-- FILE_PLACEHOLDER: Galaxy Lv.2 예시 파일 -->
+    files: [
+      { label: "Galaxy Lv.2 학습 가이드", type: "pdf", path: "" },
+      { label: "Galaxy Lv.2 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+  "Universe Lv.1": {
+    accent: "emerald",
+    desc: "캐츠 레벨 Universe Lv.1은 초등 5, 6학년 수준의 학습자가 다양한 문장의 구조와 의미를 이해하고, 한두 문장으로 자신의 생각을 표현하며 의미 중심의 표현 능력을 기를 수 있습니다.",
+    target: "영어 학습 4-5년차, 초등 5학년 수준 리딩 70W-80W / 문법 Starter 1-2를 학습 중인 학습자",
+    duration: "50분",
+    indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.2-2.9", tosel: "Basic 6-10급", jet: "중급(3, 4급)" },
+    // <!-- IMAGE_PLACEHOLDER: Universe Lv.1 안내 이미지 -->
+    images: ["universe lv1_1.png", "universe lv1_2.png", "universe lv1_3.png", "universe lv1_4.png"],
+    // <!-- FILE_PLACEHOLDER: Universe Lv.1 예시 파일 -->
+    files: [
+      { label: "Universe Lv.1 학습 가이드", type: "pdf", path: "" },
+      { label: "Universe Lv.1 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+  "Universe Lv.2": {
+    accent: "teal",
+    desc: "캐츠 레벨 Universe Lv.2는 초등 5, 6학년 수준의 학습자가 읽기 중심 학습을 통해 문장 구조를 문법적으로 이해하고, 다소 긴 문장으로 자신의 생각을 표현하며 영어의 유창성과 정확성을 함께 향상시킬 수 있습니다.",
+    target: "영어 학습 5-6년차, 초등 6학년 수준 리딩 100W / 문법 Basic 1-2를 학습 중인 학습자",
+    duration: "50분",
+    indicators: { cefr: "A2", lexile: "350L-550L", ar: "2.9-3.1", tosel: "Basic 1-5급", jet: "고급(1, 2급)" },
+    // <!-- IMAGE_PLACEHOLDER: Universe Lv.2 안내 이미지 -->
+    images: ["universe lv2_1.png", "universe lv2_2.png", "universe lv2_3.png", "universe lv2_4.png"],
+    // <!-- FILE_PLACEHOLDER: Universe Lv.2 예시 파일 -->
+    files: [
+      { label: "Universe Lv.2 학습 가이드", type: "pdf", path: "" },
+      { label: "Universe Lv.2 예시 워크시트", type: "docx", path: "" },
+    ],
+  },
+};
+
+// Tailwind Play CDN이 동적 클래스도 인식할 수 있도록, 사용 가능성이 있는 색상 클래스를 명시적으로 한 번 적어둡니다.
+/* eslint-disable */
+const _TAILWIND_SAFELIST = "bg-rose-50 bg-rose-100 bg-rose-200 text-rose-600 text-rose-700 text-rose-800 border-rose-200 border-rose-300 from-rose-500 to-rose-400 \
+bg-orange-50 bg-orange-100 bg-orange-200 text-orange-600 text-orange-700 text-orange-800 border-orange-200 border-orange-300 from-orange-500 to-orange-400 \
+bg-amber-50 bg-amber-100 bg-amber-200 text-amber-600 text-amber-700 text-amber-800 border-amber-200 border-amber-300 from-amber-500 to-amber-400 \
+bg-lime-50 bg-lime-100 bg-lime-200 text-lime-600 text-lime-700 text-lime-800 border-lime-200 border-lime-300 from-lime-500 to-lime-400 \
+bg-emerald-50 bg-emerald-100 bg-emerald-200 text-emerald-600 text-emerald-700 text-emerald-800 border-emerald-200 border-emerald-300 from-emerald-500 to-emerald-400 \
+bg-teal-50 bg-teal-100 bg-teal-200 text-teal-600 text-teal-700 text-teal-800 border-teal-200 border-teal-300 from-teal-500 to-teal-400";
+/* eslint-enable */
+
+const AREA_NAMES = ["어휘", "듣기", "읽기", "문법", "쓰기"];
+
+/* -----------------------------------------------------------------------------------------
+   2) parseReport() : 리포트 원문 → 구조화 데이터
+   -----------------------------------------------------------------------------------------
+   ※ 아래 정규식은 캐츠잉글리시 시스템 리포트 화면을 그대로 드래그하여 복사했을 때의 표기 형식을
+      기준으로 작성되었습니다 (예: "응시자테세화이 / 초등학교 1학년", "CEFR\nA1" 처럼 이름표와
+      값이 붙거나 줄바꿈으로만 구분되는 경우 포함). 리포트 화면 구성이 바뀌면 이 함수 안의
+      정규식만 수정하면 됩니다.
+----------------------------------------------------------------------------------------- */
+function parseReport(raw) {
+  const text = (raw || "").replace(/\r\n/g, "\n");
+
+  const data = {
+    studentName: null, studentGrade: null,
+    track: null, levelNum: null, levelRaw: null, session: null,
+    testDate: null, duration: null, correctCount: null, totalCount: null,
+    history: [], indicators: {}, areas: {}, diagnosisList: [], overallScore: null,
+  };
+
+  // --- 응시자 이름 / 학년 ---
+  let m;
+  if ((m = text.match(/응시자\s*([^\n\/]+?)\s*\/\s*([^\n\t]+)/))) {
+    data.studentName = m[1].trim();
+    data.studentGrade = m[2].trim();
+  }
+
+  // --- 현재 레벨 및 차시 ---
+  const levelMatch = text.match(/(Star|Galaxy|Universe|Infinite)\s*Lv\.?\s*(\d+)/i);
+  if (levelMatch) {
+    data.track = levelMatch[1][0].toUpperCase() + levelMatch[1].slice(1).toLowerCase();
+    data.levelNum = levelMatch[2];
+    data.levelRaw = `${data.track} Lv.${data.levelNum}`;
+  }
+  if ((m = text.match(/Q\s*(\d+)/i))) data.session = m[1];
+
+  // --- 응시일 / 소요 시간 / 맞은 문항 수 / 종합 점수 (상단 요약) ---
+  if ((m = text.match(/응시\s*일\s*[:\-]?\s*(\d{4}[-.]\d{1,2}[-.]\d{1,2})/))) data.testDate = m[1];
+  if ((m = text.match(/소요\s*시간[^\d]*?(\d+)\s*분/))) data.duration = +m[1];
+  if ((m = text.match(/맞은\s*문항\s*수[^\d]*?(\d+)\s*\/\s*(\d+)/))) { data.correctCount = +m[1]; data.totalCount = +m[2]; }
+  if ((m = text.match(/종합\s*점수[^\d]*?(\d+(?:\.\d+)?)\s*점/))) data.overallScore = +m[1];
+
+  // --- 누적 응시 기록 (최근 5건) ---
+  // 형식: "테스트 종류<TAB>응시 일자<TAB>소요 시간<TAB>맞은 문항 수<TAB>종합 점수" 행 단위
+  const rowRegex = /^(.+?)[ \t]+(\d{4}[-.]\d{1,2}[-.]\d{1,2})[ \t]+(\d+)\s*분[ \t]+(\d+)[ \t]+(\d+(?:\.\d+)?)\s*점\s*$/;
+  text.split("\n").forEach((line) => {
+    const rm = line.replace(/\r$/, "").match(rowRegex);
+    if (rm) data.history.push({ test: rm[1].trim(), date: rm[2], duration: rm[3], correct: rm[4], score: rm[5] });
+  });
+  if (!data.history.length) {
+    // 대체 형식(예: "1회차 2025-01-10 Star Lv.2 78점")도 인식합니다.
+    text.split("\n").forEach((line) => {
+      if (!/\d+\s*회차/.test(line)) return;
+      const roundM = line.match(/(\d+)\s*회차/);
+      const dateM = line.match(/(\d{4}[.\-]\d{1,2}[.\-]\d{1,2})/);
+      const levelM = line.match(/((?:Star|Galaxy|Universe|Infinite)\s*Lv\.?\s*\d)/i);
+      const scoreM = line.match(/(\d{1,3}(?:\.\d+)?)\s*점/);
+      if (roundM && scoreM) {
+        data.history.push({ test: levelM ? levelM[1] : `${roundM[1]}회차`, date: dateM ? dateM[1] : "-", duration: null, correct: null, score: scoreM[1] });
+      }
+    });
+  }
+  data.history = data.history.slice(0, 5);
+
+  // --- 공인 영어 레벨 예측 지표 ---
+  if ((m = text.match(/CEFR\s*[:\-]?\s*(Pre\s*A1|A1|A2|B1\+|B1|B2|C1|C2)/i))) data.indicators.cefr = m[1].replace(/\s+/g, " ").trim();
+  if ((m = text.match(/LEXILE\s*[:\-]?\s*(\d+L?\s*[-~]\s*\d+L)/i))) data.indicators.lexile = m[1].replace(/\s+/g, "").trim();
+  if ((m = text.match(/\bAR\s*[:\-]?\s*(\d+(?:\.\d+)?\s*[-~]\s*\d+(?:\.\d+)?)/i))) data.indicators.ar = m[1].replace(/\s+/g, "").trim();
+  if ((m = text.match(/TOSEL\s*[:\-]?\s*([A-Za-z\-]+\s*\(?\s*\d+\s*-\s*\d+\s*급\)?)/i))) data.indicators.tosel = m[1].replace(/\s+/g, " ").trim();
+  if ((m = text.match(/JET\s*[:\-]?\s*((?:초급|중급|고급)\s*\(?\s*\d+\s*,\s*\d+\s*(?:급|등급)\)?)/i))) data.indicators.jet = m[1].replace(/\s+/g, "").trim();
+
+  // --- 영역별 성취도 (이전 응시 / 현재 응시 문항 수) ---
+  AREA_NAMES.forEach((name) => {
+    const re = new RegExp(name + "\\s*(\\d+)\\s*/\\s*(\\d+)\\s*(\\d+)\\s*/\\s*(\\d+)");
+    const am = text.match(re);
+    if (am) {
+      const prevCorrect = +am[1], prevTotal = +am[2], curCorrect = +am[3], curTotal = +am[4];
+      data.areas[name] = {
+        prevCorrect, prevTotal, curCorrect, curTotal,
+        prevRate: prevTotal ? Math.round((prevCorrect / prevTotal) * 100) : null,
+        curRate: curTotal ? Math.round((curCorrect / curTotal) * 100) : null,
+      };
+    }
+  });
+  // 영역별 점수(예: "어휘 1.6점 1/7")가 있으면 현재 응시 점수도 함께 기록합니다.
+  AREA_NAMES.forEach((name) => {
+    const re = new RegExp(name + "[ \\t]+(\\d+(?:\\.\\d+)?)\\s*점[ \\t]+(\\d+)\\s*/\\s*(\\d+)");
+    const sm = text.match(re);
+    if (sm && data.areas[name]) data.areas[name].curScore = sm[1];
+  });
+
+  // --- 영역별 로드맵 (진단 문구, 영역명 구분 없이 문장 단위로 제공됨) ---
+  const rmMarker = "영역별 로드맵";
+  const rmIdx = text.indexOf(rmMarker);
+  if (rmIdx !== -1) {
+    data.diagnosisList = text.slice(rmIdx + rmMarker.length).split("\n")
+      .map((l) => l.trim()).filter((l) => l.length > 8).slice(0, 6);
+  }
+
+  // --- 종합 점수 보정: 상단 요약에서 못 찾았다면 영역별 평균으로 추정 ---
+  if (data.overallScore == null) {
+    const rates = Object.values(data.areas).map((a) => a.curRate).filter((v) => v != null);
+    if (rates.length) data.overallScore = Math.round(rates.reduce((a, b) => a + b, 0) / rates.length);
+  }
+
+  return data;
+}
+
+/* -----------------------------------------------------------------------------------------
+   3) 파생 로직
+----------------------------------------------------------------------------------------- */
+function getScoreBand(score) {
+  if (score == null || isNaN(score)) return null;
+  if (score >= 90) return "high";
+  if (score >= 70) return "midHigh";
+  if (score >= 50) return "midLow";
+  return "low";
+}
+
+const SCORE_BAND_LABEL = { high: "상 (90~100점)", midHigh: "중상 (70~89점)", midLow: "중하 (50~69점)", low: "하 (0~49점)" };
+const SCORE_BAND_DESC = {
+  high: "현재 학습 범위를 충분히 소화하고 있으며 누적 학습 효과가 우수한 상태",
+  midHigh: "대부분의 학습 내용을 잘 따라오고 있으며 일부 영역 추가 보완이 필요한 상태",
+  midLow: "학습이 어느 정도 쌓이고 있으나 일부 영역에서 보충이 필요한 상태",
+  low: "현재 학습 범위의 내용이 아직 충분히 체화되지 않은 상태",
+};
+const SCORE_BAND_COLOR = {
+  high: { bg: "bg-sky-50", border: "border-sky-300", text: "text-sky-800" },
+  midHigh: { bg: "bg-emerald-50", border: "border-emerald-300", text: "text-emerald-800" },
+  midLow: { bg: "bg-amber-50", border: "border-amber-300", text: "text-amber-800" },
+  low: { bg: "bg-rose-50", border: "border-rose-300", text: "text-rose-800" },
+};
+
+// 한글 받침 유무를 판단해 자연스러운 조사(이/가, 은/는, 을/를)를 붙여줍니다.
+function hasBatchim(ch) {
+  const code = ch.charCodeAt(0) - 0xac00;
+  if (code >= 0 && code <= 11171) return code % 28 !== 0;
+  return !/[aeiouAEIOU]$/.test(ch);
+}
+function josa(name, type) {
+  const n = (name && name.trim()) || "학생";
+  const last = n.slice(-1);
+  const batchim = hasBatchim(last);
+  const map = { subject: batchim ? "이" : "가", topic: batchim ? "은" : "는", object: batchim ? "을" : "를" };
+  return map[type];
+}
+function withName(name) {
+  return (name && name.trim()) || "학생";
+}
+
+// 누적 응시 기록에서 현재 응시(자기 자신)를 제외하고, 같은 트랙(Star/Galaxy/Universe/Infinite)의
+// 가장 최근 이전 기록을 찾습니다. (교사 가이드: "동일한 시험지 종류 내 응시기록"만 비교 대상으로 사용)
+function findPrevSameTrack(history, track, currentDate, currentScore) {
+  if (!track) return null;
+  for (const h of history) {
+    const isSelf = h.date === currentDate && currentScore != null && Math.abs(parseFloat(h.score) - currentScore) < 0.05;
+    if (isSelf) continue;
+    if (h.test && h.test.toLowerCase().includes(track.toLowerCase())) return h;
+  }
+  return null;
+}
+
+function getStrengthAreas(areas) {
+  return Object.entries(areas)
+    .filter(([_, v]) => v.curRate != null && v.prevRate != null && v.curRate > v.prevRate)
+    .sort((a, b) => (b[1].curRate - b[1].prevRate) - (a[1].curRate - a[1].prevRate))
+    .map(([name, v]) => ({ name, prevRate: v.prevRate, curRate: v.curRate }));
+}
+
+/* -----------------------------------------------------------------------------------------
+   4) generateScript() : 확인된 데이터 → 상담 스크립트 문자열
+   교사용 가이드(5-2. 실제 상담 예시)의 문단 구성과 어조를 그대로 따르며, [ ] 로 표시된 구간에는
+   실제 리포트에서 확인한 종합 점수·지표·영역별 성취도 데이터를 채워 넣습니다.
+----------------------------------------------------------------------------------------- */
+function buildDurationComment(duration, name, subj) {
+  if (duration == null) return "";
+  if (duration <= 10) {
+    return `소요 시간을 보니 ${duration}분 만에 빠르게 마쳤어요. 다음 평가 때는 ${name}${subj} 문제를 얼마나 꼼꼼히 살펴보며 풀었는지 함께 확인해봐도 좋을 것 같아요.`;
+  }
+  return `${name}${subj} ${duration}분 동안 진행한 것으로 봐서 성취도평가에 정말 진지하게 임해주었네요~^^ 문제를 꼼꼼하게 푸는 습관도 길러지는 것 같아 기특합니다.`;
+}
+
+function buildTrendComment(current, prevEntry, name, subj) {
+  if (current == null) return "";
+  if (!prevEntry) {
+    return "아직 같은 종류의 이전 평가 기록이 없어서 이번이 첫 비교 기준점이 될 것 같아요. 다음 평가 때부터는 성장 추이를 함께 확인할 수 있어요.";
+  }
+  const prev = parseFloat(prevEntry.score);
+  const diff = Math.round((current - prev) * 10) / 10;
+  if (diff >= 3) {
+    return `지난 ${prevEntry.date} 평가(${prevEntry.test})에서 ${prev}점이었는데 이번에 ${current}점으로 ${diff}점이나 올랐어요! 이 사이에 ${name}${subj} 얼마나 꾸준히 했는지 숫자로 딱 보이죠? 정말 대단해요! 이 페이스 그대로 이어가면 다음 평가에서도 좋은 결과 기대할 수 있을 거예요.`;
+  }
+  if (diff <= -3) {
+    return `이번에 지난 ${prevEntry.date} 평가보다 조금 낮게 나왔는데요(${prev}점 → ${current}점), 전체 실력이 떨어진 게 절대 아니에요. 이번 시험 범위에서 특정 영역이 아직 더 익힘이 필요한 시기인 거예요. 사실 지금은 완벽한 결과를 내기보다, 부족한 영역이 무엇인지 알고 다지고 가는 것이 정말 중요하잖아요. 영역별 성취도를 같이 보면 어디인지 바로 알 수 있어요. 같이 확인해볼게요!`;
+  }
+  return `지난 ${prevEntry.date} 평가에서 ${prev}점, 이번에도 ${current}점으로 안정적으로 유지되고 있어요. 영어는 유지도 실력이에요! 꾸준히 자리를 잡아가고 있다는 증거니까 이 흐름 그대로 이어가면 다음 평가에서 더 오를 수 있을 거예요.`;
+}
+
+function buildAreaSection(areas, diagnosisList, name, subj) {
+  const entries = AREA_NAMES.map((n) => (areas[n] ? { name: n, ...areas[n] } : null)).filter(Boolean);
+  const lines = [];
+  lines.push(`어휘·듣기·읽기·문법·쓰기 영역별로 ${name}${subj} 어떻게 하고 있는지 살펴볼게요.`);
+  if (!entries.length) {
+    lines.push("");
+    lines.push("(영역별 성취도 정보를 리포트에서 확인하지 못했습니다. 왼쪽 확인 결과를 참고해 직접 보완해 주세요.)");
+    return lines.join("\n");
+  }
+  const improved = entries.filter((e) => e.curRate > e.prevRate).sort((a, b) => (b.curRate - b.prevRate) - (a.curRate - a.prevRate));
+  const declined = entries.filter((e) => e.curRate <= e.prevRate);
+  lines.push("");
+  if (improved.length) {
+    const names = improved.map((e) => e.name).join(", ");
+    lines.push(`잘 하고 있는 영역: ${names} 영역에서 이전 응시 대비 정답률이 올랐어요. 특히 ${improved[0].name} 영역은 ${improved[0].prevRate}% → ${improved[0].curRate}%로 눈에 띄게 향상되었어요.`);
+  } else {
+    lines.push(`잘 하고 있는 영역: 이번 평가에서는 전반적으로 이전과 비슷한 수준을 안정적으로 유지했어요.`);
+  }
+  if (declined.length) {
+    const names = declined.map((e) => e.name).join(", ");
+    lines.push(`더 채워가면 좋을 영역: ${names} 영역은 이전보다 정답률이 다소 낮아졌어요. 한 번의 평가로 실력이 떨어진 게 아니라, 이 시기에 조금 더 채워가면 좋을 부분으로 봐주시면 좋을 것 같아요.`);
+  }
+  if (diagnosisList && diagnosisList.length) {
+    lines.push("");
+    lines.push("영역별 로드맵을 보면:");
+    diagnosisList.forEach((d) => lines.push(`- ${d}`));
+  }
+  return lines.join("\n");
+}
+
+const STUDY_PLAN_TEXT = {
+  high: (n, subj) => `이번 결과가 아주 좋았어요! ${n}${subj} 학습 내용을 차곡차곡 내 것으로 만들며 성장하고 있어요. 지금 학습 패턴 그대로 자신 있게 다음 단계로 나아가도 될 것 같아요.^^`,
+  midHigh: (n) => `전반적으로 학습이 잘 이루어지고 있어서 지금 레벨이 ${n}에게 잘 맞고 있어요~ 보완이 필요한 영역만 조금 더 신경 써주면 되는데요, 영어는 한 번에 결과가 나오는 게 아니라 꾸준히 쌓인 다음에 전체 영역에서 한꺼번에 나타나거든요. 지금처럼 꾸준히 쌓아가면 다음 평가에서는 점수로 분명히 나타날 거예요.`,
+  midLow: (n) => `현재 학습 내용을 충분히 익혀가는 중인데 이건 학습 과정에서 자연스러운 단계예요. 지금은 한 번 더 반복해서 완전히 내 것으로 만드는 시간이 필요한 시기예요. 지금 레벨에서 기초를 탄탄히 다진 후 다음 평가에 재도전하면 더욱 성장한 결과를 함께 볼 수 있을 거예요.`,
+  low: (n) => `현재 학습 범위의 내용이 아직 충분히 체화되지 않은 상태로 보여요. 급하게 다음 단계로 나아가기보다, 지금 레벨의 기초부터 차근차근 다시 다지는 시간이 필요해요. 코스북과 리딩 학습에서 부족한 영역을 반복 학습하며 기초를 채워가면, 다음 평가에서는 훨씬 안정된 결과를 볼 수 있을 거예요.`,
+};
+
+function generateScript(parsed, studentNameRaw) {
+  const sName = withName(studentNameRaw || parsed.studentName);
+  const subj = josa(sName, "subject");
+  const top = josa(sName, "topic");
+
+  const level = parsed.levelRaw || "(레벨 정보를 확인할 수 없습니다)";
+  const session = parsed.session ? ` Q${parsed.session}` : "";
+  const levelInfo = LEVEL_DATA[parsed.levelRaw];
+
+  const durationComment = buildDurationComment(parsed.duration, sName, subj);
+  const scoreLine = parsed.overallScore != null
+    ? `${sName}의 이번 종합 점수는 ${parsed.overallScore}점이에요.${parsed.totalCount != null ? ` ${parsed.totalCount}문항 중 ${parsed.correctCount}문항을 맞았어요.` : ""}`
+    : "종합 점수를 리포트에서 확인하지 못했습니다.";
+
+  const prevEntry = findPrevSameTrack(parsed.history, parsed.track, parsed.testDate, parsed.overallScore);
+  const trendComment = buildTrendComment(parsed.overallScore, prevEntry, sName, subj);
+
+  const ind = parsed.indicators;
+  const indicatorPara = `${sName}의 현재 수준을 공인 영어 레벨 예측 지표로 말씀드리면 CEFR은 ${ind.cefr || "-"} 단계인데요, 유럽 공통 언어 기준으로 외국어 이해·표현 능력을 종합적으로 평가한 수치예요.${levelInfo ? " " + levelInfo.desc : ""}
+
+지금 학습 중인 ${level}${session}의 Lexile은 약 ${ind.lexile || "-"} 구간이고, AR은 ${ind.ar || "-"} 수준이에요. TOSEL ${ind.tosel || "-"}, JET ${ind.jet || "-"} 같은 초등 대상 영어 능력 평가의 수준도 함께 준비해가고 있다고 보시면 됩니다. 레벨별 지표가 궁금하시면 학습기 > ELT의 '영어 로드맵'에서 자세히 확인하실 수 있어요.`;
+
+  const areaSection = buildAreaSection(parsed.areas, parsed.diagnosisList, sName, subj);
+
+  const band = getScoreBand(parsed.overallScore);
+  const planText = band
+    ? `${SCORE_BAND_DESC[band]}이에요. ${STUDY_PLAN_TEXT[band](sName, subj)}`
+    : "학습 계획을 안내하기 위한 종합 점수를 리포트에서 확인하지 못했습니다.";
+
+  return `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
+
+이 평가는 ${sName}${subj} 그동안 학습한 내용이 얼마나 잘 쌓이고 있는지, 어떤 영역이 특히 잘 되고 있는지, 그리고 앞으로 더 신경 써주면 좋을 부분이 어딘지를 함께 확인하는 시간이에요.
+
+[종합 점수]
+${durationComment}
+${scoreLine}
+
+[누적 응시 기록]
+${trendComment}
+
+[공인 영어 레벨 예측 지표]
+${indicatorPara}
+
+[영역별 성취도]
+${areaSection}
+
+[최종 학습 계획]
+${planText}
+
+어머님, 오늘 꼼꼼히 살펴봐 주셔서 감사해요. 성취도평가는 앞으로도 정기적으로 진행되어서 ${sName}의 성장을 계속 함께 확인할 수 있어요. 지금 잘 하고 있는 부분은 더 자신감 갖게 해주고, 보완이 필요한 부분은 저도 라이브 클래스에서 더 신경 써드릴게요. ${sName}${subj} '나 영어 잘하고 있구나'라고 느낄 수 있도록 같이 만들어가요. 감사합니다!`;
+}
+
+/* -----------------------------------------------------------------------------------------
+   5) 렌더링
+----------------------------------------------------------------------------------------- */
+let lastParsed = null;
+
+function renderParsedSummary(data) {
+  const box = document.getElementById("parsedSummary");
+  const foundAreas = Object.keys(data.areas).length;
+  const foundInd = Object.keys(data.indicators).length;
+  const foundDiag = data.diagnosisList.length;
+
+  let html = "";
+
+  // 응시자 정보 + 레벨/차시
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">응시자 정보</div>
+    ${data.studentName
+      ? `<div class="text-sm font-bold text-slate-700">${data.studentName}${data.studentGrade ? ` · ${data.studentGrade}` : ""}</div>`
+      : `<span class="text-slate-400 text-xs">인식되지 않음</span>`}
+    <div class="mt-1.5 flex flex-wrap gap-1.5">
+      ${data.levelRaw ? `<span class="badge bg-sky-100 text-sky-700 text-sm">${data.levelRaw}${data.session ? ` · Q${data.session}` : ""}</span>` : ""}
+      ${data.testDate ? `<span class="badge bg-slate-100 text-slate-600">응시일 ${data.testDate}</span>` : ""}
+    </div>
+  </div>`;
+
+  // 종합 점수 / 소요시간 / 맞은 문항수
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">종합 점수</div>
+    ${data.overallScore != null
+      ? `<div class="flex items-baseline gap-3">
+          <span class="text-2xl font-extrabold text-sky-600">${data.overallScore}점</span>
+          ${data.duration != null ? `<span class="text-xs text-slate-500">소요 시간 ${data.duration}분</span>` : ""}
+          ${data.totalCount != null ? `<span class="text-xs text-slate-500">맞은 문항 ${data.correctCount}/${data.totalCount}</span>` : ""}
+        </div>`
+      : `<span class="text-slate-400 text-xs">인식되지 않음</span>`}
+  </div>`;
+
+  // 공인 지표
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">공인 영어 레벨 예측 지표 ${foundInd ? "" : '<span class="text-rose-400">(인식 안 됨)</span>'}</div>
+    <div class="flex flex-wrap gap-1.5">
+      ${data.indicators.cefr ? `<span class="badge bg-sky-50 text-sky-700 border border-sky-200">CEFR ${data.indicators.cefr}</span>` : ""}
+      ${data.indicators.lexile ? `<span class="badge bg-sky-50 text-sky-700 border border-sky-200">Lexile ${data.indicators.lexile}</span>` : ""}
+      ${data.indicators.ar ? `<span class="badge bg-sky-50 text-sky-700 border border-sky-200">AR ${data.indicators.ar}</span>` : ""}
+      ${data.indicators.tosel ? `<span class="badge bg-sky-50 text-sky-700 border border-sky-200">TOSEL ${data.indicators.tosel}</span>` : ""}
+      ${data.indicators.jet ? `<span class="badge bg-sky-50 text-sky-700 border border-sky-200">JET ${data.indicators.jet}</span>` : ""}
+      ${foundInd === 0 ? `<span class="text-slate-400 text-xs">-</span>` : ""}
+    </div>
+  </div>`;
+
+  // 누적 응시 기록
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">누적 응시 기록 (최근 ${data.history.length}건)</div>
+    ${data.history.length ? `
+    <div class="overflow-x-auto rounded-lg border border-sky-100">
+      <table class="w-full text-xs">
+        <thead class="bg-sky-50 text-sky-700">
+          <tr>
+            <th class="py-1.5 px-2 text-left font-bold">테스트</th>
+            <th class="py-1.5 px-2 text-left font-bold">응시일</th>
+            <th class="py-1.5 px-2 text-left font-bold">소요시간</th>
+            <th class="py-1.5 px-2 text-left font-bold">맞은 문항</th>
+            <th class="py-1.5 px-2 text-left font-bold">점수</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.history.map((h, i) => `
+            <tr class="${i % 2 ? "bg-white" : "bg-sky-50/40"}">
+              <td class="py-1.5 px-2">${h.test}</td>
+              <td class="py-1.5 px-2">${h.date}</td>
+              <td class="py-1.5 px-2">${h.duration != null ? h.duration + "분" : "-"}</td>
+              <td class="py-1.5 px-2">${h.correct != null ? h.correct : "-"}</td>
+              <td class="py-1.5 px-2 font-bold text-sky-700">${h.score}점</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>` : `<span class="text-slate-400 text-xs">인식되지 않음</span>`}
+  </div>`;
+
+  // 영역별 성취도
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">영역별 성취도 (이전 → 현재 정답률) ${foundAreas ? "" : '<span class="text-rose-400">(인식 안 됨)</span>'}</div>
+    <div class="space-y-2">
+      ${AREA_NAMES.map((name) => {
+        const a = data.areas[name];
+        if (!a) return `<div class="flex items-center gap-2 text-xs text-slate-300"><span class="w-8">${name}</span><span>인식되지 않음</span></div>`;
+        const improved = a.curRate > a.prevRate;
+        const same = a.curRate === a.prevRate;
+        const barColor = improved ? "bg-emerald-400" : same ? "bg-sky-300" : "bg-rose-300";
+        return `<div class="flex items-center gap-2 text-xs">
+          <span class="w-8 font-bold text-slate-600 shrink-0">${name}</span>
+          <span class="text-slate-400 w-16 shrink-0">${a.prevCorrect}/${a.prevTotal} → ${a.curCorrect}/${a.curTotal}</span>
+          <div class="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="${barColor} h-full rounded-full" style="width:${a.curRate}%"></div>
+          </div>
+          <span class="w-10 text-right font-bold ${improved ? "text-emerald-600" : same ? "text-sky-500" : "text-rose-500"}">${a.curRate}%</span>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+
+  // 영역별 로드맵
+  html += `<div>
+    <div class="text-xs font-bold text-slate-400 mb-1">영역별 로드맵 ${foundDiag ? "" : '<span class="text-rose-400">(인식 안 됨)</span>'}</div>
+    ${foundDiag ? `<ul class="space-y-1 text-xs text-slate-600 list-disc list-inside">
+        ${data.diagnosisList.map((d) => `<li>${d}</li>`).join("")}
+      </ul>` : `<span class="text-slate-400 text-xs">-</span>`}
+  </div>`;
+
+  box.innerHTML = html;
+}
+
+function renderScript() {
+  const studentName = document.getElementById("studentName").value;
+  const scriptBox = document.getElementById("scriptOutput");
+  const strengthBox = document.getElementById("strengthBox");
+  const planBox = document.getElementById("finalPlanBox");
+
+  if (!lastParsed) {
+    scriptBox.textContent = "학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.\n확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.";
+    strengthBox.classList.add("hidden");
+    planBox.classList.add("hidden");
+    return;
+  }
+
+  const sName = withName(studentName || lastParsed.studentName);
+  const strengths = getStrengthAreas(lastParsed.areas);
+
+  // 강점 영역 박스
+  strengthBox.classList.remove("hidden");
+  if (strengths.length) {
+    strengthBox.className = "bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800";
+    strengthBox.innerHTML = `<b>💪 자동으로 확인된 강점 영역</b> · ${strengths.map((s) => `${s.name} (${s.prevRate}% → ${s.curRate}%)`).join(", ")}`;
+  } else {
+    strengthBox.className = "bg-sky-50 border border-sky-200 rounded-xl p-4 text-sm text-sky-800";
+    strengthBox.innerHTML = `<b>ℹ️ 강점 영역</b> · 이전 응시 대비 정답률이 상승한 영역이 없습니다.`;
+  }
+
+  // 최종 학습 계획 박스
+  const band = getScoreBand(lastParsed.overallScore);
+  if (band) {
+    const c = SCORE_BAND_COLOR[band];
+    planBox.classList.remove("hidden");
+    planBox.className = `rounded-xl p-4 text-sm border ${c.bg} ${c.border} ${c.text}`;
+    planBox.innerHTML = `<b>🎯 최종 학습 계획 (종합점수 ${lastParsed.overallScore}점 · ${SCORE_BAND_LABEL[band]})</b><br>${STUDY_PLAN_TEXT[band](sName, josa(sName, "subject"))}`;
+  } else {
+    planBox.classList.add("hidden");
+  }
+
+  scriptBox.textContent = generateScript(lastParsed, studentName);
+}
+
+function renderLevelGuide() {
+  const select = document.getElementById("levelSelect");
+  const key = select.value;
+  const d = LEVEL_DATA[key];
+  const panel = document.getElementById("levelGuidePanel");
+  if (!d) { panel.innerHTML = ""; return; }
+
+  const filesHtml = d.files.map((f) => {
+    const icon = f.type === "pdf" ? "📄" : "📝";
+    if (f.path) {
+      return `<a href="${f.path}" target="_blank" class="flex items-center gap-3 rounded-xl border border-${d.accent}-200 bg-${d.accent}-50 hover:bg-${d.accent}-100 transition p-3">
+        <span class="text-2xl">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-bold text-slate-700 truncate">${f.label}</div>
+          <div class="text-xs text-slate-400">${f.type.toUpperCase()} 파일 열기</div>
+        </div>
+        <span class="text-${d.accent}-500 font-bold text-sm">열기 ›</span>
+      </a>`;
+    }
+    return `<div class="flex items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 opacity-70 cursor-not-allowed"
+        title="소스 코드 내 LEVEL_DATA의 files.path 값을 실제 파일 경로로 지정하면 활성화됩니다.">
+      <span class="text-2xl grayscale">${icon}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-bold text-slate-500 truncate">${f.label}</div>
+        <div class="text-xs text-slate-400">파일 미등록 · 경로를 연결해주세요</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const imagesHtml = d.images.map((src) => `
+    <button onclick="openImgModal('${src.replace(/'/g, "\\'")}')" class="group rounded-xl overflow-hidden border border-${d.accent}-200 bg-white hover:shadow-md transition">
+      <img src="${encodeURI(src)}" alt="${key} 안내 이미지" loading="lazy"
+        class="w-full h-32 object-cover object-top group-hover:scale-105 transition"
+        onerror="this.closest('button').innerHTML='<div class=\\'h-32 flex items-center justify-center text-xs text-slate-400 p-2 text-center\\'>이미지를 찾을 수 없습니다<br>(${src})</div>'">
+    </button>`).join("");
+
+  panel.innerHTML = `
+    <div class="rounded-2xl bg-gradient-to-br from-${d.accent}-500 to-${d.accent}-400 text-white p-5 mb-4 fade-in">
+      <div class="text-lg font-extrabold mb-1">${key}</div>
+      <p class="text-sm leading-relaxed text-white/95">${d.desc}</p>
+    </div>
+
+    <div class="flex flex-wrap gap-1.5 mb-3">
+      <span class="badge bg-${d.accent}-50 text-${d.accent}-700 border border-${d.accent}-200">CEFR ${d.indicators.cefr}</span>
+      <span class="badge bg-${d.accent}-50 text-${d.accent}-700 border border-${d.accent}-200">Lexile ${d.indicators.lexile}</span>
+      <span class="badge bg-${d.accent}-50 text-${d.accent}-700 border border-${d.accent}-200">AR ${d.indicators.ar}</span>
+      <span class="badge bg-${d.accent}-50 text-${d.accent}-700 border border-${d.accent}-200">TOSEL ${d.indicators.tosel}</span>
+      <span class="badge bg-${d.accent}-50 text-${d.accent}-700 border border-${d.accent}-200">JET ${d.indicators.jet}</span>
+    </div>
+
+    <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 mb-5 text-xs text-slate-600">
+      <b class="text-slate-700">추천 대상</b> · ${d.target} · 제한시간 ${d.duration}
+    </div>
+
+    <div class="mb-2 text-sm font-extrabold text-slate-700">📷 레벨 안내 이미지</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5">${imagesHtml || `<span class="text-xs text-slate-400">등록된 이미지가 없습니다.</span>`}</div>
+
+    <div class="mb-2 text-sm font-extrabold text-slate-700">📁 단계별 예시 파일</div>
+    <div class="space-y-2">${filesHtml}</div>
+  `;
+}
+
+function openImgModal(src) {
+  document.getElementById("imgModalSrc").src = encodeURI(src);
+  const modal = document.getElementById("imgModal");
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+function closeImgModal(e) {
+  if (e && e.target && e.target.id !== "imgModal") return;
+  const modal = document.getElementById("imgModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.opacity = "1";
+  t.style.transform = "translate(-50%, -6px)";
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    t.style.opacity = "0";
+    t.style.transform = "translate(-50%, 0)";
+  }, 1800);
+}
+
+/* -----------------------------------------------------------------------------------------
+   6) 이벤트 바인딩
+----------------------------------------------------------------------------------------- */
+const SAMPLE_REPORT = `테세화이 학생의영어 능력 성취도평가 리포트
+응시자테세화이 / 초등학교 1학년	응시일2026-06-30	응시레벨 - 차시Galaxy Lv.1 - Q1
+종합 점수
+41.9점
+소요 시간
+3분
+맞은 문항 수
+16/40
+누적 응시 기록
+테스트 종류	응시 일자	소요 시간	맞은 문항 수	종합 점수
+Galaxy Lv.1 - Q1	2026-06-30	3분	16	41.9점
+Universe Lv.1 - Q4	2026-06-26	7분	6	11.6점
+Galaxy Lv.1 - Q4	2026-06-25	9분	8	16.2점
+Star Lv.1 - Q1	2026-06-25	32분	12	45.5점
+Basic Mini	2026-04-08	1분	3	9.0점
+공인 영어 레벨 예측 지표
+CEFR
+A1
+Lexile
+110L-500L
+AR
+1.6-2.0
+TOSEL
+Starter 6-10급
+JET
+초급(5, 6급)
+영역별 성취도
+어휘
+2/7
+1/7
+듣기
+6/17
+7/17
+읽기
+0/8
+4/8
+문법
+0/4
+3/4
+쓰기
+0/4
+1/4
+이전 응시
+현재 응시
+영역	점수	문항 수
+어휘	1.6점	1/7
+듣기	15.9점	7/17
+읽기	10.8점	4/8
+문법	9.6점	3/4
+쓰기	4.0점	1/4
+영역별 로드맵
+리딩 50 Word에서 학습한 문장 구조 이해에 어려움이 있습니다. 지문에서 핵심 내용을 파악하며 독해 능력을 키워가는 연습이 필요합니다.
+코스북 Level 3에서 접한 기초 표현 이해에 어려움이 보입니다. 기초 표현을 다양하게 접하며 표현 이해의 기초를 차근차근 채워가는 연습이 필요합니다.`;
+
+document.getElementById("btnSample").addEventListener("click", () => {
+  document.getElementById("reportInput").value = SAMPLE_REPORT;
+});
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  document.getElementById("reportInput").value = "";
+  document.getElementById("parseStatus").textContent = "아직 불러온 리포트가 없습니다.";
+  document.getElementById("parseStatus").className = "text-xs text-slate-400 mt-2";
+  document.getElementById("parsedSummary").innerHTML = `<p class="text-slate-400">리포트를 붙여넣고 확인하면 결과가 이곳에 표시됩니다.</p>`;
+  lastParsed = null;
+  renderScript();
+});
+
+document.getElementById("btnParse").addEventListener("click", () => {
+  const raw = document.getElementById("reportInput").value;
+  const status = document.getElementById("parseStatus");
+  if (!raw.trim()) {
+    status.textContent = "붙여넣은 리포트 내용이 없습니다.";
+    status.className = "text-xs text-rose-500 mt-2";
+    return;
+  }
+  const data = parseReport(raw);
+  lastParsed = data;
+  renderParsedSummary(data);
+
+  // 학생 이름이 비어 있으면 리포트에서 확인한 이름으로 자동 입력합니다.
+  const nameInput = document.getElementById("studentName");
+  if (!nameInput.value.trim() && data.studentName) nameInput.value = data.studentName;
+
+  renderScript();
+
+  const foundCount = [data.levelRaw, data.history.length, Object.keys(data.indicators).length, Object.keys(data.areas).length, data.diagnosisList.length].filter(Boolean).length;
+  status.textContent = `리포트를 확인했어요 (${foundCount}/5개 항목 인식됨) — 항목이 비어 있다면 리포트 형식을 다시 확인해주세요.`;
+  status.className = "text-xs text-sky-600 mt-2 font-bold";
+
+  // 레벨 가이드 탭 자동 매칭
+  if (data.levelRaw && LEVEL_DATA[data.levelRaw]) {
+    document.getElementById("levelSelect").value = data.levelRaw;
+    renderLevelGuide();
+  }
+});
+
+document.getElementById("studentName").addEventListener("input", renderScript);
+
+document.getElementById("btnCopy").addEventListener("click", async () => {
+  const txt = document.getElementById("scriptOutput").textContent;
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast("스크립트가 복사되었습니다!");
+  } catch (e) {
+    // 클립보드 API 접근이 막힌 환경(예: file:// 프로토콜 일부 브라우저)을 위한 대체 방법
+    const ta = document.createElement("textarea");
+    ta.value = txt;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); showToast("스크립트가 복사되었습니다!"); }
+    catch (e2) { showToast("복사에 실패했습니다. 직접 선택해 복사해주세요."); }
+    document.body.removeChild(ta);
+  }
+});
+
+// 탭 전환
+const tabScriptBtn = document.getElementById("tabScriptBtn");
+const tabGuideBtn = document.getElementById("tabGuideBtn");
+const tabScriptPanel = document.getElementById("tabScriptPanel");
+const tabGuidePanel = document.getElementById("tabGuidePanel");
+
+tabScriptBtn.addEventListener("click", () => {
+  tabScriptBtn.classList.add("active");
+  tabGuideBtn.classList.remove("active");
+  tabScriptPanel.classList.remove("hidden");
+  tabScriptPanel.classList.add("flex");
+  tabGuidePanel.classList.add("hidden");
+  tabGuidePanel.classList.remove("flex");
+});
+tabGuideBtn.addEventListener("click", () => {
+  tabGuideBtn.classList.add("active");
+  tabScriptBtn.classList.remove("active");
+  tabGuidePanel.classList.remove("hidden");
+  tabGuidePanel.classList.add("flex");
+  tabScriptPanel.classList.add("hidden");
+  tabScriptPanel.classList.remove("flex");
+});
+
+document.getElementById("levelSelect").addEventListener("change", renderLevelGuide);
+
+// 초기화: 레벨 셀렉트 옵션 채우기 + 첫 렌더
+(function init() {
+  const select = document.getElementById("levelSelect");
+  Object.keys(LEVEL_DATA).forEach((key) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = key;
+    select.appendChild(opt);
+  });
+  renderLevelGuide();
+  renderScript();
+})();
+</script>
+</body>
+</html>
