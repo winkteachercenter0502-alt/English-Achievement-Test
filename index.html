@@ -11,6 +11,11 @@
 <!-- 나눔스퀘어 네오 (NanumSquareNeo) 웹폰트 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquareNeo@1.0/nanumsquareneo.css">
 
+<!-- mammoth.js: "캐츠잉글리시 해야 하는 이유.docx" 재업로드 시 브라우저에서 바로 텍스트를 추출하기
+     위한 라이브러리입니다. 기본 문구는 REASON_DATA에 이미 내장되어 있어 이 스크립트가 없어도(오프라인
+     환경 등) 앱은 정상 동작하며, 이 라이브러리는 "다른 워드파일로 업데이트" 기능에서만 사용됩니다. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
 <style>
   html, body { font-family: 'NanumSquareNeo', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
   .font-bold, .font-extrabold, .font-black, h1, h2, h3, .nsq-eb { font-family: 'NanumSquareNeo', 'Malgun Gothic', sans-serif; font-weight: 800; }
@@ -29,6 +34,12 @@
   .tab-btn.active { background: #0ea5e9; color: #fff; box-shadow: 0 4px 14px -4px rgba(14,165,233,.5); }
   .tab-btn:not(.active) { background: #f0f9ff; color: #0369a1; }
   .tab-btn:not(.active):hover { background: #e0f2fe; }
+
+  /* [★ 캐츠잉글리시를 해야 하는 이유] 섹션용 고민 유형 선택 버튼. 선택 시 남색(스크립트 포인트
+     컬러)으로 채워지고, 같은 버튼을 다시 누르면 선택이 해제됩니다. */
+  .reason-btn { transition: all .15s ease; }
+  .reason-btn.active { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+  .reason-btn:not(.active):hover { background: #f0f9ff; }
 
   .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.25rem .6rem; border-radius:9999px; font-size:.75rem; font-weight:700; white-space:nowrap; }
 
@@ -127,6 +138,26 @@
               </button>
             </div>
           </div>
+
+          <!-- [★ 캐츠잉글리시를 해야 하는 이유] 매칭용 학부모 고민 유형 선택 바.
+               "캐츠잉글리시 해야 하는 이유.docx" 문구가 기본으로 내장되어 있어(REASON_DATA), 아래 3개
+               버튼 중 하나를 클릭하면 학년군(트랙) × 종합 점수 구간과 조합해 스크립트 맨 아래
+               [최종 학습 계획] 다음, 마무리 인사 앞에 해당 섹션이 자동으로 추가됩니다. -->
+          <div class="mb-2">
+            <div class="flex items-center justify-between flex-wrap gap-1.5 mb-1.5">
+              <span class="text-xs font-extrabold text-blue-900">★ 캐츠잉글리시를 해야 하는 이유 — 학부모 고민 유형 선택 (선택 사항)</span>
+              <label class="text-xs text-sky-600 hover:text-sky-800 underline underline-offset-2 cursor-pointer whitespace-nowrap">
+                📄 문구 워드파일로 업데이트
+                <input type="file" id="reasonDocxInput" accept=".docx" class="hidden">
+              </label>
+            </div>
+            <div class="flex gap-1.5 flex-wrap">
+              <button type="button" data-concern="academy" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">① 어학원/학원 고민</button>
+              <button type="button" data-concern="pad" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">② 타사 온라인/패드 학습 고민</button>
+              <button type="button" data-concern="studyroom" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">③ 공부방/방문학습지 고민</button>
+            </div>
+          </div>
+
           <div id="scriptOutput" contenteditable="true" spellcheck="false"
             class="whitespace-pre-wrap text-sm leading-relaxed bg-white border-2 border-blue-900 rounded-xl p-4 min-h-[260px] scroll-panel outline-none cursor-text focus:ring-2 focus:ring-sky-300 transition">
 학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.
@@ -620,6 +651,106 @@ function buildFinalPlan(parsed, sName, subj) {
 ${conclusion}`;
 }
 
+/* -----------------------------------------------------------------------------------------
+   3-5) [★ 캐츠잉글리시를 해야 하는 이유] — 학년군 × 학부모 고민 유형 × 점수 구간 매칭 문구
+   원본 출처: "캐츠잉글리시 해야 하는 이유.docx" (교사 폴더에 위치). 기본값으로 아래 REASON_DATA에
+   내장되어 있으며, 문구가 바뀌면 코드 수정 없이도 같은 형식의 .docx 파일을 다시 업로드해
+   parseReasonDocxText()로 실시간 반영할 수 있습니다. 교사가 클릭하는 3가지 고민 유형 버튼과
+   조합되어 [최종 학습 계획] 다음, 마무리 인사 앞에 독립 섹션으로 삽입됩니다.
+   학년군은 리포트 텍스트를 직접 파싱하지 않고, 이미 신뢰도 높게 파싱되는 트랙(Star/Galaxy/
+   Universe)을 LEVEL_DATA의 학년 표기(1,2학년 / 3,4학년 / 5,6학년)와 동일하게 매핑해 구합니다.
+----------------------------------------------------------------------------------------- */
+const TRACK_GRADE_GROUP = { Star: "1~2", Galaxy: "3~4", Universe: "5~6" };
+function getGradeGroup(track) { return TRACK_GRADE_GROUP[track] || null; }
+
+const CONCERN_LABELS = {
+  academy: "① 어학원/학원 고민",
+  pad: "② 타사 온라인/패드 학습 고민",
+  studyroom: "③ 공부방/방문학습지 고민",
+};
+
+const REASON_DATA = {
+  "1~2": {
+    academy: {
+      high: "어머님, 아이가 1~2학년 시기에 이렇게 영어를 잘 소화하고 있다 보니, 주변 이야기 들으시고 '이제 슬슬 유명한 대형 어학원 레벨테스트를 보고 학원으로 옮겨볼까?' 하고 고민하시는 분들이 실제로 참 많으신데요~ 대형 학원은 아무래도 정원이 많다 보니까 비싼 수강료를 내고 1시간 이상 강의실에 앉아 있다 와도 우리 아이가 직접 입 밖으로 소리 내어 말할 수 있는 시간은 하루에 5분도 채 안 되는 경우가 많아서 참 아쉽더라고요. 빽빽한 단어 암기나 숙제 압박 때문에 아이가 주도성을 잃고 수동적으로 끌려다니기도 쉽고요. 반면에 캐츠는 매일 AI 폭슬리와 주고받으며 24시간 언제든 스피킹 발화 훈련을 하면서 전문학원 매칭 콘텐츠를 소화하잖아요. 아이가 공부의 주인공이 되는 이 귀한 '자기주도학습 습관'을 흔들림 없이 유지하면서, 기분 좋게 다음 단계로 승급해서 영어의 재미를 더 넓혀가는 게 장기적으로 훨씬 유리합니다.^^",
+      low: "학교 영어 수업이나 난이도가 올라가면서 점수가 생각보다 주춤하니까, 불안한 마음에 '숙제 많고 빡빡하게 돌리는 입시 학원으로 무작정 보내야 하나' 하고 고민하시는 분들이 정말 많으시더라고요~ 그런데 이 시기에는 영역별 균형을 잡느라 누구나 잠시 정체기를 겪곤 해요. 이 불안감 때문에 무작정 숙제 폭탄이 떨어지는 학원으로 옮기시면, 아이가 영어를 거대한 스트레스로 느껴서 아예 마음을 닫아버리거나 정작 취약한 문법/어휘의 구멍은 채워지지 못하고 결손으로 남는 경우가 많아요. 캐츠는 렉사일과 AR 지수 기반으로 오직 우리 아이 맞춤형 처방과 반복이 가능한 구조잖아요. 아이가 지치지 않게 가용 시간 맞춰 스케줄을 딱 다듬어 주면서, 현재 레벨에서 부족한 약점을 든든하게 유지하며 채워가는 게 장기적으로 가장 안전하고 현명한 선택입니다.",
+    },
+    pad: {
+      high: "어머님, 아이가 1~2학년 때부터 영어 성적을 너무 잘 내고 있다 보니까, 다른 과목 밸런스나 종합 학습 걱정 때문에 전과목을 다 봐준다는 '타사 스마트 패드 학습이나 종합 인강'으로 갈아타 볼까 하고 고민하시는 분들이 참 많으신데요~ 사실 종합 패드 학습을 자세히 들여다보면 영어는 메인이 아니라 부가 콘텐츠 수준인 경우가 많아서, 전문 교재나 체계적인 훈련틀이 부족하다는 아쉬움이 있어요. 결국 화면 속 인강을 멍하니 수동적으로 '시청'만 하게 되다 보니, 상위권 아이들에게 제일 중요한 말하기나 아웃풋 능력을 초반부터 놓치기 쉽거든요. 캐츠는 초등 8종 영어 교과서 완벽 대응은 물론이고 전문학원급 4대 영역 훈련틀을 고스란히 가지고 있잖아요. 지금의 탄탄한 전문 아웃풋 훈련 흐름과 흥미를 깨뜨리지 않고 유지하면서 초등 영어의 뼈대를 부드럽게 연결해 가시는 걸 권장해 드립니다.",
+      low: "아이가 아직 어려서 패드 학습이 조금 밀리거나 점수가 주춤하니까, '전과목 다 해준다는 종합 패드 학습으로 편하게 바꿔야 하나' 하고 고민하시는 분들이 실제로 참 많으신데요~ 절대 아이 실력이 부족해서가 아니라, 1~2학년 시기에는 핵심 어휘와 영어 소리를 온전히 내 것으로 만드는 '절대적인 시간과 반복'이 조금 더 필요한 타이밍이라 그래요. 이때 조급한 마음에 오답 맞춤 처방 프로세스도 없는 일반 패드 학습으로 바꾸시면 취약한 영역 구멍이 그대로 방치되어 나중에 학년이 올라갈 때 큰 결손으로 이어지기 쉽거든요. 캐츠는 시중 교재 전 문항을 커버하는 수학 맞춤 처방과 영어 전문 스케줄 조율 시스템을 다 가지고 있잖아요. 무리하게 환경을 바꾸기보다는 현재 레벨에서 기초 뼈대를 뚝심 있게 다지고 완전히 체화할 수 있도록 선생님과 1:1로 가용 시간을 맞춰 유지해 주는 것이 장기적으로 가장 확실한 지름길입니다.",
+    },
+    studyroom: {
+      high: "어머님, 아이가 1~2학년 시기에 이렇게 영어를 잘 소화하고 있다 보니, 주변 이야기 들으시고 '이제 관리가 조금 더 느슨한 일반 방문 학습지나 집 앞 가벼운 공부방으로 편하게 바꿔볼까?' 하고 고민하시는 분들이 실제로 많이 계시는데요~ 사실 방문 학습지는 선생님이 일주일에 한 번 오셔서 잠깐 확인만 하시는 구조라 매일 소화해야 하는 분량은 결국 고스란히 어머님 숙제가 되는 경우가 많아서 아이도 부모님도 금방 지치시더라고요. 캐츠잉글리시는 영어 전문학원급 콘텐츠를 가지고 매일 일대일 맞춤형 AI 폭슬리와 대화하며 말하기 훈련을 밀착해서 진행하거든요. 지금처럼 잘할 때 이 든든한 아웃풋 환경을 유지해 주시면서 다음 단계로 자연스럽게 넘어가야 아이의 영어 능력이 최상위권으로 완전히 자리를 잡게 됩니다. 이 예쁜 상승세를 깨뜨리지 않고 같이 쭉 이어가 주시는 걸 추천해 드려요.^^",
+      low: "아이가 이번 점수를 조금 아쉬워하다 보니, '학습기가 밀리나 싶기도 하고, 그냥 더 쉬운 학습지나 동네 공부방으로 옮겨야 하나' 하고 고민하시는 분들이 참 많으시더라고요~ 그런데 학습 습관을 잡아가는 과정에서 점수가 주춤한 건 정말 자연스러운 일이에요. 이때 쉬운 학습지나 공부방으로 후퇴해 버리면 듣기나 말하기 같은 영역별 밸런스가 다 깨지고 단순 알파벳이나 초등 최하위 기초 수준에만 영원히 갇히게 되어서 오히려 아쉽게 되거든요. 캐츠는 1:1로 아이 가용 시간에 맞춰서 진도와 스케줄을 아주 세밀하게 쪼개서 조율할 수 있는 시스템이잖아요. 무리하게 다른 환경으로 바꾸시기보다는, 저랑 소통하시면서 부담 없는 스케줄로 조율해 현재 레벨에서 부족한 기초를 천천히, 촘촘하게 메워가는 게 장기적으로 실력도 키우고 사교육비도 아끼는 가장 좋은 방법입니다. 저도 옆에서 더 신경 써서 도울게요.",
+    },
+  },
+  "3~4": {
+    academy: {
+      high: "어머님, 이제 3~4학년 학교 영어도 시작되고 성적도 워낙 우수하게 나오다 보니까, 주변 엄마들 분위기 따라서 '이제 슬슬 대형 어학원 레벨테스트를 보고 학원으로 옮겨볼까?' 하고 고민하시는 분들이 참 많으시는 시기인데요~ 대형 학원은 아무래도 정원이 많다 보니까 비싼 수강료를 내고 1시간 이상 강의실에 앉아 있다 와도 우리 아이가 직접 입 밖으로 소리 내어 말할 수 있는 시간은 하루에 5분도 채 안 되는 경우가 많아서 참 아쉽더라고요. 빽빽한 단어 암기나 숙제 압박 때문에 아이가 주도성을 잃고 수동적으로 끌려다니기도 쉽고요. 반면에 캐츠는 매일 AI 폭슬리와 주고받으며 24시간 언제든 스피킹 발화 훈련을 하면서 전문학원 매칭 콘텐츠를 소화하잖아요. 아이가 공부의 주인공이 되는 이 귀한 '자기주도학습 습관'을 흔들림 없이 유지하면서, 기분 좋게 다음 단계로 승급해서 영어의 재미를 더 넓혀가는 게 장기적으로 훨씬 유리합니다.^^",
+      low: "학교 영어 수업이 본격적으로 나오면서 점수가 생각보다 주춤하니까, 불안한 마음에 '숙제 많고 빡빡하게 돌리는 입시 학원이나 보습학원으로 무작정 보내야 하나' 하고 고민하시는 분들이 정말 많으시더라고요~ 그런데 3~4학년 때는 영역별 균형을 잡느라 누구나 잠시 정체기를 겪곤 해요. 이 불안감 때문에 무작정 숙제 폭탄이 떨어지는 학원으로 옮기시면, 아이가 영어를 거대한 스트레스로 느껴서 아예 마음을 닫아버리거나 정작 취약한 문법/어휘의 구멍은 채워지지 못하고 결손으로 남는 경우가 많아요. 캐츠는 렉사일과 AR 지수 기반으로 오직 우리 아이 맞춤형 처방과 반복이 가능한 구조잖아요. 아이가 지치지 않게 가용 시간 맞춰 스케줄을 딱 다듬어 주면서, 현재 레벨에서 부족한 약점을 든든하게 유지하며 채워가는 게 장기적으로 가장 안전하고 현명한 선택입니다.",
+    },
+    pad: {
+      high: "어머님, 3~4학년 학교 영어에서 성적을 너무 잘 내고 있다 보니까, 다른 교과 과목과의 밸런스 걱정 때문에 전과목을 다 봐준다는 '타사 스마트 패드 학습이나 종합 인강'으로 갈아타 볼까 하고 고민하시는 분들이 참 많으신데요~ 사실 종합 패드 학습을 자세히 들여다보면 영어는 메인이 아니라 부가 콘텐츠 수준인 경우가 많아서, 전문 교재나 체계적인 훈련틀이 부족하다는 아쉬움이 있어요. 결국 화면 속 인강을 멍하니 수동적으로 '시청'만 하게 되다 보니, 상위권 아이들에게 제일 중요한 말하기나 서술형 쓰기 능력을 놓치기 쉽거든요. 캐츠는 초등 8종 교과서 완벽 대응은 물론이고 영어 전문학원급 4대 영역 훈련틀을 고스란히 가지고 있잖아요. 지금의 탄탄한 전문 아웃풋 훈련 흐름을 깨뜨리지 않고 유지하면서 고학년 과정까지 부드럽게 연결해 가시는 걸 권장해 드립니다.",
+      low: "3~4학년 학교 진도가 나가면서 내용이 조금 어려워지다 보니 주춤하니까 '이러다 학교 진도에서 밀리는 거 아닌가, 전과목 봐주는 종합 패드 학습으로 바꿔야 하나' 하고 고민하시는 분들이 실제로 참 많으신데요~ 절대 아이 실력이 부족해서가 아니라, 영어 4대 영역의 뼈대를 온전히 내 것으로 만드는 '절대적인 시간과 반복'이 조금 더 필요한 타이밍이라 그래요. 이때 조급한 마음에 오답 맞춤 처방 프로세스도 없는 일반 패드 학습으로 바꾸시면 취약한 영역 구멍이 그대로 방치되어 나중에 고학년 올라가서 큰 감점으로 이어지기 쉽고, 초등 수준에만 갇히게 되거든요. 캐츠는 시중 교재 전 문항을 커버하는 수학 맞춤 처방과 영어 전문 스케줄 조율 시스템을 다 가지고 있잖아요. 무리하게 환경을 바꾸기보다는 현재 레벨에서 기초 뼈대를 뚝심 있게 다지고 완전히 체화할 수 있도록 유지해 주는 것이 가장 확실한 지름길입니다.",
+    },
+    studyroom: {
+      high: "어머님, 아이가 3~4학년 과정에서도 영어를 워낙 잘 소화하고 있다 보니, 주변 이야기 들으시고 '이제 관리가 조금 더 느슨하고 편한 일반 방문 학습지나 집 앞 가벼운 공부방으로 바꿔볼까?' 하고 고민하시는 분들이 실제로 많이 계시는데요~ 사실 방문 학습지는 선생님이 일주일에 한 번 오셔서 잠깐 확인만 하시는 구조라 매일 소화해야 하는 분량은 결국 고스란히 어머님 숙제가 되는 경우가 많아서 아이도 부모님도 금방 지치시더라고요. 캐츠잉글리시는 영어 전문학원급 콘텐츠를 가지고 매일 일대일 맞춤형 AI 폭슬리와 대화하며 말하기 훈련을 밀착해서 진행하거든요. 지금처럼 잘할 때 이 든든한 아웃풋 환경을 유지해 주시면서 고학년 단계로 자연스럽게 넘어가야 아이의 영어 능력이 최상위권으로 완전히 자리를 잡게 됩니다. 이 예쁜 상승세를 깨뜨리지 않고 같이 쭉 이어가 주시는 걸 추천해 드려요.^^",
+      low: "아이가 이번 3~4학년 성적을 조금 아쉬워하다 보니, '학습기가 밀리나 싶기도 하고, 그냥 더 쉬운 학습지나 동네 공부방으로 옮겨야 하나' 하고 고민하시는 분들이 참 많으시더라고요~ 그런데 본격적으로 영어 공부량이 늘어나는 과정에서 점수가 주춤한 건 정말 자연스러운 일이에요. 이때 쉬운 학습지나 공부방으로 후퇴해 버리면 듣기나 말하기 같은 영역별 밸런스가 다 깨지고 단순 알파벳이나 초등 기초 수준에만 영원히 갇히게 되어서 오히려 아쉽게 되거든요. 캐츠는 1:1로 아이 가용 시간에 맞춰서 진도와 스케줄을 아주 세밀하게 쪼개서 조율할 수 있는 시스템이잖아요. 무리하게 다른 환경으로 바꾸시기보다는, 저랑 소통하시면서 부담 없는 스케줄로 조율해 현재 레벨에서 부족한 기초를 천천히, 촘촘하게 메워가는 게 장기적으로 실력도 키우고 사교육비도 아끼는 가장 좋은 방법입니다. 저도 옆에서 더 신경 써서 도울게요.",
+    },
+  },
+  "5~6": {
+    academy: {
+      high: "어머님, 이제 중학교 입학이 코앞이라 마음이 조급해지다 보니, '이제 무조건 중등 선행 빡빡하게 돌리는 대형 입시학원이나 보습학원으로 옮겨야 하나' 하고 고민하시는 분들이 이 시기에 정말 많으신데요~ 대형 학원의 중등 선행반은 철저히 독해와 문법 위주의 일방향 지필고사 수업이라, 정작 중학교 내신 성적의 40% 이상을 차지하는 '서술형 수행평가(말하기/쓰기)'를 대비할 수 있는 훈련틀이 전혀 없어서 진도만 빼고 정작 감점당하는 아이들이 태반입니다. 캐츠는 초등 8종 영어 교과 검정 교과 대응은 물론이고, 매일 AI 폭슬리와 서술형 문장 완성 및 말하기 아웃풋 훈련을 하기 때문에 중학교 수행평가와 고학년 아웃풋을 동시에 잡아낼 수 있는 독보적인 시스템이에요. 지금처럼 우수한 상승세와 주도적인 공부 패턴을 깨뜨리지 않고 자체 전문 로드맵을 통해 중고등 과정까지 하이패스로 안전하게 유지하며 연결하는 것이 중학 상위권을 선점하는 가장 확실한 전략입니다.^^",
+      low: "내용이 중등 과정과 연결되며 어려워지면서 점수가 주춤하니까 중학교 가서 밀릴까 봐 덜컥 '중등 선행 학원이나 대형 보습학원으로 보내야 하나' 하고 고민하시는 분들이 실제로 참 많으신데요~ 무작정 진도만 빼는 대형 학원에 준비 없이 가면, 많은 정원 속에서 우리 아이 취약 영역 구멍이 전혀 케어되지 않은 채 들러리만 서다 오기 쉽고 영어에 질려버릴 위험이 큽니다. 캐츠는 시중 교재 전 문항을 커버하는 수학 중등 6종 교과서 맞춤 처방과 영어 4대 영역 1:1 진도 조율 시스템이 확실하잖아요. 중학교 올라가기 전 필수 어휘와 문법 뼈대를 온전히 다지는 '절대적인 시간'이 필요한 타이밍인 만큼, 무리하게 학원으로 옮겨 구멍을 키우기보다는 현재 레벨에서 기초 뼈대를 뚝심 있게 다지고 완전히 체화할 수 있도록 1:1로 스케줄을 조정해 이끌어 주는 것이 중학교 내신에서 무너지지 않는 가장 현명한 지름길입니다. 제가 더 꼼꼼히 챙기겠습니다.",
+    },
+    pad: {
+      high: "어머님, 아이가 고학년 영어 성적을 너무 잘 내고 있다 보니까, 다른 과목 밸런스나 중등 내신 걱정 때문에 전과목을 다 봐준다는 '타사 스마트 패드 학습이나 종합 인강'으로 갈아타 볼까 하고 고민하시는 분들이 참 많으신데요~ 사실 종합 패드 학습을 자세히 들여다보면 영어는 메인이 아니라 부가 콘텐츠 수준인 경우가 많아서, 전문 교재나 체계적인 훈련틀이 부족하다는 아쉬움이 있어요. 결국 화면 속 인강을 멍하니 수동적으로 '시청'만 하게 되다 보니, 상위권 아이들에게 제일 중요한 말하기나 서술형 쓰기 능력을 놓치기 쉽거든요. 캐츠는 초등 8종 교과서 완벽 대응은 물론이고 영어 전문학원급 4대 영역 훈련틀을 고스란히 가지고 있잖아요. 지금의 탄탄한 전문 아웃풋 훈련 흐름을 깨뜨리지 않고 유지하면서 중고등 과정까지 부드럽게 연결해 가시는 걸 권장해 드립니다.",
+      low: "내용이 중등 과정과 연결되며 조금 어려워지면서 주춤하니까 '이러다 중학교 가서 밀리는 거 아닌가, 전과목 봐주는 종합 패드 학습으로 바꿔야 하나' 하고 고민하시는 분들이 실제로 참 많으신데요~ 절대 아이 실력이 부족해서가 아니라, 핵심 어휘와 문법 뼈대를 온전히 내 것으로 만드는 '절대적인 시간과 반복'이 조금 더 필요한 타이밍이라 그래요. 이때 조급한 마음에 오답 맞춤 처방 프로세스도 없는 일반 패드 학습으로 바꾸시면 취약한 영역 구멍이 그대로 방치되어 나중에 중학 서술형 평가에서 큰 감점으로 이어지기 쉽고, 초등 수준에만 갇혀 중고등 영어 진입 시기를 놓치게 되거든요. 캐츠는 중등 6종 교과서를 포함한 시중 교재 전 문항을 커버하는 수학 맞춤 처방과 영어 전문 스케줄 조율 시스템을 다 가지고 있잖아요. 무리하게 환경을 바꾸기보다는 현재 레벨에서 기초 뼈대를 뚝심 있게 다지고 완전히 체화할 수 있도록 유지해 주는 것이 중학교 올라가서 상위권을 선점하는 가장 확실한 지름길입니다.",
+    },
+    studyroom: {
+      high: "어머님, 이제 중학교 진학을 앞두고 아이가 고학년 과정에서도 영어를 아주 훌륭하게 해내고 있다 보니까, '이제 영어는 이만하면 됐으니 관리가 조금 더 편한 방문 학습지나 가벼운 공부방으로 바꾸고 타 과목에 집중해볼까?' 하고 고민하시는 분들이 간혹 계시는데요~ 그런데 고학년 시기에 전문적인 영어 아웃풋 관리가 느슨한 환경으로 바꾸시면 주 1회 단순 확인에 그치기 때문에 그동안 어렵게 잡아놓은 말하기나 서술형 쓰기 감각이 순식간에 무뎌지게 됩니다. 캐츠잉글리시는 영어 전문학원급 콘텐츠를 가지고 매일 일대일 맞춤형 AI 폭슬리와 문장 완성 및 말하기 훈련을 밀착해서 진행하거든요. 지금처럼 잘할 때 이 든든한 아웃풋 환경을 중등 과정까지 깨뜨리지 않고 쥐고 가셔야 중학교 수행평가와 지필고사에서 완벽한 최상위권을 유지할 수 있습니다. 이 소중한 공부 패턴을 끝까지 유지해 주시는 걸 강력히 권장해 드립니다.^^",
+      low: "이제 중학교 올라갈 시기가 다가오는데 점수가 주춤하고 학습기가 밀리는 것 같으니까, 불안한 마음에 '그냥 다 내려놓고 쉬운 방문 학습지나 동네 공부방으로 후퇴해서 기초만 시켜야 하나' 하고 고민하시는 분들이 실제로 참 많으신데요~ 그런데 이 시기에 중등 대비가 안 되는 일반 학습지나 공부방으로 후퇴해 버리면 초등 수준의 단순 반복에만 완전히 갇히게 되어서 중고등 영어 진입 장벽을 영영 넘지 못하는 치명적인 결손이 발생합니다. 지금 점수가 주춤한 건 중학 과정의 필수 어휘와 문법을 내 것으로 체화하는 '절대적인 시간'이 필요해서 그런 거예요. 캐츠는 1:1로 아이 가용 시간과 수행률에 맞춰서 스케줄을 아주 세밀하게 쪼개서 조율할 수 있잖아요. 환경을 바꾸기보다는 저랑 소통하시면서 부담 없는 분량으로 조율해 현재 레벨에서 기초 뼈대를 촘촘하게 메워가는 게 중학교 내신에서 무너지지 않는 가장 확실한 지름길입니다. 제가 더 밀착해서 케어할게요.",
+    },
+  },
+};
+
+function buildReasonSection(parsed, concern) {
+  if (!concern) return null;
+  const gradeGroup = getGradeGroup(parsed.track);
+  const band = getScoreBand(parsed.overallScore);
+  if (!gradeGroup || !band) {
+    return "학년군 또는 종합 점수 정보를 리포트에서 확인하지 못해 맞춤 문구를 표시할 수 없습니다. 왼쪽 리포트 확인 결과를 다시 확인해주세요.";
+  }
+  const reasonBand = band === "high" ? "high" : "low";
+  const entry = REASON_DATA[gradeGroup] && REASON_DATA[gradeGroup][concern];
+  const text = entry ? entry[reasonBand] : null;
+  return text || "선택하신 고민 유형에 대한 매칭 문구를 찾지 못했습니다. 워드 파일 내용을 확인해주세요.";
+}
+
+// 교사가 업데이트된 "캐츠잉글리시 해야 하는 이유.docx"를 다시 업로드했을 때, mammoth.js로 추출한
+// 원문 텍스트에서 같은 규칙([학년군] 헤더 / ①②③ 고민 헤더 / "상 구간"·"중상/중하/하 구간" 줄)으로
+// 문단을 다시 인덱싱합니다. 매칭되지 않는 줄은 무시하고, 매칭된 항목만 REASON_DATA를 덮어씁니다.
+function parseReasonDocxText(rawText) {
+  const lines = (rawText || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const concernMap = { "①": "academy", "②": "pad", "③": "studyroom" };
+  const result = {};
+  let curGrade = null, curConcern = null;
+  lines.forEach((line) => {
+    const gm = line.match(/\[초등\s*(\d)~(\d)학년군\]/);
+    if (gm) { curGrade = `${gm[1]}~${gm[2]}`; if (!result[curGrade]) result[curGrade] = {}; return; }
+    const cm = line.match(/^([①②③])/);
+    if (cm) { curConcern = concernMap[cm[1]]; return; }
+    const bm = line.match(/^(상\s*구간\s*\(90~100점\)|중상\/중하\/하\s*구간\s*\(0~89점\))\s*[:：]\s*"(.+)"\s*$/);
+    if (bm && curGrade && curConcern) {
+      const band = bm[1].startsWith("상") ? "high" : "low";
+      if (!result[curGrade]) result[curGrade] = {};
+      if (!result[curGrade][curConcern]) result[curGrade][curConcern] = {};
+      result[curGrade][curConcern][band] = bm[2].trim();
+    }
+  });
+  return result;
+}
+
 function generateScript(parsed, studentNameRaw) {
   const sName = withName(studentNameRaw || parsed.studentName);
   const subj = josa(sName, "subject");
@@ -648,6 +779,10 @@ function generateScript(parsed, studentNameRaw) {
   const band = getScoreBand(parsed.overallScore);
   const planTitle = band ? `최종 학습 계획 · ${SCORE_BAND_LABEL[band]}` : "최종 학습 계획";
 
+  // reasonConcern(모듈 전역)은 교사가 스크립트 패널 상단 3개 버튼 중 하나를 클릭했을 때만 채워지며,
+  // 선택하지 않은 상태(null)에서는 [★ 캐츠잉글리시를 해야 하는 이유] 섹션 자체를 생성하지 않습니다.
+  const reasonText = buildReasonSection(parsed, reasonConcern);
+
   return {
     greeting: `어머니, 안녕하세요! 이번에 ${sName} 학생이 정기 성취도평가를 잘 마쳐서 결과 안내드리려고 연락드려요.
 
@@ -658,6 +793,7 @@ function generateScript(parsed, studentNameRaw) {
       { title: "공인 영어 레벨 예측 지표", body: indicatorPara },
       { title: "영역별 성취도", body: areaSection },
       { title: planTitle, body: planText },
+      ...(reasonText ? [{ title: "★ 캐츠잉글리시를 해야 하는 이유", body: reasonText }] : []),
     ],
     closing: `어머님, 오늘 꼼꼼히 살펴봐 주셔서 감사해요. 성취도평가는 앞으로도 정기적으로 진행되어서 ${sName}의 성장을 계속 함께 확인할 수 있어요. 지금 잘 하고 있는 부분은 더 자신감 갖게 해주고, 보완이 필요한 부분은 저도 라이브 클래스에서 더 신경 써드릴게요. ${sName}${subj} '나 영어 잘하고 있구나'라고 느낄 수 있도록 같이 만들어가요. 감사합니다!`,
   };
@@ -811,6 +947,10 @@ function renderParsedSummary(data) {
 }
 
 let manualEdit = false;
+// 교사가 스크립트 패널 상단의 3개 고민 유형 버튼 중 하나를 클릭하면 "academy"|"pad"|"studyroom" 중
+// 하나로 채워지고, 같은 버튼을 다시 누르면 null로 되돌아가 [★ 캐츠잉글리시를 해야 하는 이유] 섹션이
+// 사라집니다. 새 리포트를 불러오거나 지우기를 누르면 다시 null로 초기화됩니다.
+let reasonConcern = null;
 
 // 학생 이름 변경만으로는(수동 편집 중이 아닐 때) 스크립트 본문을 새로 생성해 채워 넣습니다.
 function updateScriptText() {
@@ -985,6 +1125,8 @@ document.getElementById("btnClear").addEventListener("click", () => {
   document.getElementById("parsedSummary").innerHTML = `<p class="text-slate-400">리포트를 붙여넣고 확인하면 결과가 이곳에 표시됩니다.</p>`;
   lastParsed = null;
   manualEdit = false;
+  reasonConcern = null;
+  document.querySelectorAll(".reason-btn").forEach((b) => b.classList.remove("active"));
   document.getElementById("btnResetScript").classList.add("hidden");
   renderScript(true);
 });
@@ -1034,6 +1176,58 @@ document.getElementById("btnResetScript").addEventListener("click", () => {
   manualEdit = false;
   document.getElementById("btnResetScript").classList.add("hidden");
   updateScriptText();
+});
+
+// [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형 버튼: 클릭한 유형으로 스크립트를 즉시 재생성합니다.
+// 이미 선택된 버튼을 다시 누르면 선택이 해제되고 해당 섹션이 스크립트에서 사라집니다.
+// 새 리포트 확인/지우기와 동일하게 forceRegenerate(true)로 재생성하므로, 교사가 직접 수정한 내용이
+// 있다면 이 버튼을 누르기 전에 먼저 확인해 주세요(수동 편집 중 되돌리기 안내 문구와 동일한 트레이드오프).
+document.querySelectorAll(".reason-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const val = btn.dataset.concern;
+    reasonConcern = (reasonConcern === val) ? null : val;
+    document.querySelectorAll(".reason-btn").forEach((b) => b.classList.toggle("active", b.dataset.concern === reasonConcern));
+    manualEdit = false;
+    document.getElementById("btnResetScript").classList.add("hidden");
+    renderScript(true);
+  });
+});
+
+// "캐츠잉글리시 해야 하는 이유.docx"를 교사가 다시 업로드하면 mammoth.js로 원문 텍스트를 추출해
+// parseReasonDocxText()로 재인덱싱하고, 매칭된 항목만 REASON_DATA를 덮어씁니다(매칭 안 된 학년군/
+// 고민/구간은 기존 기본값을 그대로 유지).
+document.getElementById("reasonDocxInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (typeof mammoth === "undefined") {
+    showToast("워드 파일 처리 기능을 불러오지 못했습니다(인터넷 연결을 확인해주세요).");
+    return;
+  }
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const parsed = parseReasonDocxText(result.value);
+    let count = 0;
+    Object.keys(parsed).forEach((g) => {
+      if (!REASON_DATA[g]) REASON_DATA[g] = {};
+      Object.keys(parsed[g]).forEach((c) => {
+        if (!REASON_DATA[g][c]) REASON_DATA[g][c] = {};
+        Object.keys(parsed[g][c]).forEach((b) => {
+          REASON_DATA[g][c][b] = parsed[g][c][b];
+          count++;
+        });
+      });
+    });
+    if (!count) {
+      showToast("워드 파일에서 인식 가능한 문구를 찾지 못했습니다. 형식을 확인해주세요.");
+      return;
+    }
+    showToast(`워드 파일에서 ${count}개 문구를 반영했습니다.`);
+    if (reasonConcern) renderScript(true);
+  } catch (err) {
+    showToast("워드 파일을 읽지 못했습니다. .docx 형식인지 확인해주세요.");
+  }
 });
 
 document.getElementById("btnCopy").addEventListener("click", async () => {
