@@ -11,11 +11,6 @@
 <!-- 나눔스퀘어 네오 (NanumSquareNeo) 웹폰트 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquareNeo@1.0/nanumsquareneo.css">
 
-<!-- mammoth.js: "캐츠잉글리시 해야 하는 이유.docx" 재업로드 시 브라우저에서 바로 텍스트를 추출하기
-     위한 라이브러리입니다. 기본 문구는 REASON_DATA에 이미 내장되어 있어 이 스크립트가 없어도(오프라인
-     환경 등) 앱은 정상 동작하며, 이 라이브러리는 "다른 워드파일로 업데이트" 기능에서만 사용됩니다. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-
 <style>
   html, body { font-family: 'NanumSquareNeo', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
   .font-bold, .font-extrabold, .font-black, h1, h2, h3, .nsq-eb { font-family: 'NanumSquareNeo', 'Malgun Gothic', sans-serif; font-weight: 800; }
@@ -139,23 +134,14 @@
             </div>
           </div>
 
-          <!-- [★ 캐츠잉글리시를 해야 하는 이유] 매칭용 학부모 고민 유형 선택 바.
-               "캐츠잉글리시 해야 하는 이유.docx" 문구가 기본으로 내장되어 있어(REASON_DATA), 아래 3개
-               버튼 중 하나를 클릭하면 학년군(트랙) × 종합 점수 구간과 조합해 스크립트 맨 아래
-               [최종 학습 계획] 다음, 마무리 인사 앞에 해당 섹션이 자동으로 추가됩니다. -->
-          <div class="mb-2">
-            <div class="flex items-center justify-between flex-wrap gap-1.5 mb-1.5">
-              <span class="text-xs font-extrabold text-blue-900">★ 캐츠잉글리시를 해야 하는 이유 — 학부모 고민 유형 선택 (선택 사항)</span>
-              <label class="text-xs text-sky-600 hover:text-sky-800 underline underline-offset-2 cursor-pointer whitespace-nowrap">
-                📄 문구 워드파일로 업데이트
-                <input type="file" id="reasonDocxInput" accept=".docx" class="hidden">
-              </label>
-            </div>
-            <div class="flex gap-1.5 flex-wrap">
-              <button type="button" data-concern="academy" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">① 어학원/학원 고민</button>
-              <button type="button" data-concern="pad" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">② 타사 온라인/패드 학습 고민</button>
-              <button type="button" data-concern="studyroom" class="reason-btn flex-1 min-w-[110px] rounded-lg py-1.5 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-white">③ 공부방/방문학습지 고민</button>
-            </div>
+          <!-- [★ 캐츠잉글리시를 해야 하는 이유] 매칭용 학부모 고민 유형 선택 블록 3개.
+               리포트를 확인하면 학년군에 맞는 고민 유형이 자동으로 선택되어(1~2학년군→②, 3~6학년군→①)
+               클릭 없이도 스크립트 맨 아래 [최종 학습 계획] 다음, 마무리 인사 앞에 다른 섹션들과 동일한
+               블록 형태로 항상 표시됩니다. 아래 3개 블록 중 하나를 클릭하면 그 고민 유형으로 바뀝니다. -->
+          <div class="grid grid-cols-3 gap-1.5 mb-2">
+            <button type="button" data-concern="academy" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">① 어학원/학원 고민</button>
+            <button type="button" data-concern="pad" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">② 타사 온라인/패드 학습 고민</button>
+            <button type="button" data-concern="studyroom" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">③ 공부방/방문학습지 고민</button>
           </div>
 
           <div id="scriptOutput" contenteditable="true" spellcheck="false"
@@ -653,15 +639,21 @@ ${conclusion}`;
 
 /* -----------------------------------------------------------------------------------------
    3-5) [★ 캐츠잉글리시를 해야 하는 이유] — 학년군 × 학부모 고민 유형 × 점수 구간 매칭 문구
-   원본 출처: "캐츠잉글리시 해야 하는 이유.docx" (교사 폴더에 위치). 기본값으로 아래 REASON_DATA에
-   내장되어 있으며, 문구가 바뀌면 코드 수정 없이도 같은 형식의 .docx 파일을 다시 업로드해
-   parseReasonDocxText()로 실시간 반영할 수 있습니다. 교사가 클릭하는 3가지 고민 유형 버튼과
-   조합되어 [최종 학습 계획] 다음, 마무리 인사 앞에 독립 섹션으로 삽입됩니다.
+   원본 출처: "캐츠잉글리시 해야 하는 이유.docx" (교사 폴더에 위치). 아래 REASON_DATA에 원문 그대로
+   하드코딩되어 있으며(문구가 바뀌면 이 상수를 직접 수정), 학년군 × 점수 구간 × 학부모 고민 유형(3개
+   블록 버튼)을 조합해 [최종 학습 계획] 다음, 마무리 인사 앞에 독립 섹션으로 삽입됩니다.
    학년군은 리포트 텍스트를 직접 파싱하지 않고, 이미 신뢰도 높게 파싱되는 트랙(Star/Galaxy/
    Universe)을 LEVEL_DATA의 학년 표기(1,2학년 / 3,4학년 / 5,6학년)와 동일하게 매핑해 구합니다.
 ----------------------------------------------------------------------------------------- */
 const TRACK_GRADE_GROUP = { Star: "1~2", Galaxy: "3~4", Universe: "5~6" };
 function getGradeGroup(track) { return TRACK_GRADE_GROUP[track] || null; }
+
+// 새 리포트를 확인할 때마다 학년군에 맞는 고민 유형을 기본으로 자동 선택합니다(교사가 매번 버튼을
+// 누르지 않아도 [★ 캐츠잉글리시를 해야 하는 이유] 블록이 항상 채워져 있도록). 저학년(1~2학년군)은
+// 타사 온라인/패드 학습 고민이, 중고학년(3~4/5~6학년군)은 어학원/학원 고민이 실제로 더 흔한 이탈
+// 사유라 이렇게 매핑했습니다. 교사가 3개 버튼 중 하나를 직접 클릭하면 그 선택이 그대로 유지됩니다.
+const DEFAULT_CONCERN_BY_GRADE_GROUP = { "1~2": "pad", "3~4": "academy", "5~6": "academy" };
+function getDefaultConcern(gradeGroup) { return DEFAULT_CONCERN_BY_GRADE_GROUP[gradeGroup] || null; }
 
 const CONCERN_LABELS = {
   academy: "① 어학원/학원 고민",
@@ -724,31 +716,7 @@ function buildReasonSection(parsed, concern) {
   const reasonBand = band === "high" ? "high" : "low";
   const entry = REASON_DATA[gradeGroup] && REASON_DATA[gradeGroup][concern];
   const text = entry ? entry[reasonBand] : null;
-  return text || "선택하신 고민 유형에 대한 매칭 문구를 찾지 못했습니다. 워드 파일 내용을 확인해주세요.";
-}
-
-// 교사가 업데이트된 "캐츠잉글리시 해야 하는 이유.docx"를 다시 업로드했을 때, mammoth.js로 추출한
-// 원문 텍스트에서 같은 규칙([학년군] 헤더 / ①②③ 고민 헤더 / "상 구간"·"중상/중하/하 구간" 줄)으로
-// 문단을 다시 인덱싱합니다. 매칭되지 않는 줄은 무시하고, 매칭된 항목만 REASON_DATA를 덮어씁니다.
-function parseReasonDocxText(rawText) {
-  const lines = (rawText || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const concernMap = { "①": "academy", "②": "pad", "③": "studyroom" };
-  const result = {};
-  let curGrade = null, curConcern = null;
-  lines.forEach((line) => {
-    const gm = line.match(/\[초등\s*(\d)~(\d)학년군\]/);
-    if (gm) { curGrade = `${gm[1]}~${gm[2]}`; if (!result[curGrade]) result[curGrade] = {}; return; }
-    const cm = line.match(/^([①②③])/);
-    if (cm) { curConcern = concernMap[cm[1]]; return; }
-    const bm = line.match(/^(상\s*구간\s*\(90~100점\)|중상\/중하\/하\s*구간\s*\(0~89점\))\s*[:：]\s*"(.+)"\s*$/);
-    if (bm && curGrade && curConcern) {
-      const band = bm[1].startsWith("상") ? "high" : "low";
-      if (!result[curGrade]) result[curGrade] = {};
-      if (!result[curGrade][curConcern]) result[curGrade][curConcern] = {};
-      result[curGrade][curConcern][band] = bm[2].trim();
-    }
-  });
-  return result;
+  return text || "선택하신 고민 유형에 대한 매칭 문구를 찾지 못했습니다.";
 }
 
 function generateScript(parsed, studentNameRaw) {
@@ -1150,6 +1118,13 @@ document.getElementById("btnParse").addEventListener("click", () => {
   // 새 리포트를 불러온 경우, 이전에 직접 수정한 내용이 있어도 새로 생성합니다.
   manualEdit = false;
   document.getElementById("btnResetScript").classList.add("hidden");
+
+  // [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형을 학년군에 맞는 기본값으로 자동 선택합니다
+  // (1~2학년군 → 타사 온라인/패드, 3~4·5~6학년군 → 어학원/학원). 교사가 버튼을 직접 눌러 바꿀 때까지
+  // 이 기본값이 유지되며, 스크립트 하단에 다른 섹션들과 동일한 블록 형태로 항상 표시됩니다.
+  reasonConcern = getDefaultConcern(getGradeGroup(data.track));
+  document.querySelectorAll(".reason-btn").forEach((b) => b.classList.toggle("active", b.dataset.concern === reasonConcern));
+
   renderScript(true);
 
   const foundCount = [data.levelRaw, data.history.length, Object.keys(data.indicators).length, Object.keys(data.areas).length, data.diagnosisList.length].filter(Boolean).length;
@@ -1179,55 +1154,19 @@ document.getElementById("btnResetScript").addEventListener("click", () => {
 });
 
 // [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형 버튼: 클릭한 유형으로 스크립트를 즉시 재생성합니다.
-// 이미 선택된 버튼을 다시 누르면 선택이 해제되고 해당 섹션이 스크립트에서 사라집니다.
-// 새 리포트 확인/지우기와 동일하게 forceRegenerate(true)로 재생성하므로, 교사가 직접 수정한 내용이
-// 있다면 이 버튼을 누르기 전에 먼저 확인해 주세요(수동 편집 중 되돌리기 안내 문구와 동일한 트레이드오프).
+// 학년군 기본값이 항상 하나 선택되어 있는 상태이므로(getDefaultConcern), 버튼은 그 기본값을 다른
+// 고민 유형으로 "바꾸는" 용도로만 동작합니다(다시 눌러도 해제되지 않음 — 섹션이 항상 블록으로 떠 있어야
+// 하므로 "선택 없음" 상태 자체가 없습니다). 새 리포트 확인/지우기와 동일하게 forceRegenerate(true)로
+// 재생성하므로, 교사가 직접 수정한 내용이 있다면 이 버튼을 누르기 전에 먼저 확인해 주세요.
 document.querySelectorAll(".reason-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const val = btn.dataset.concern;
-    reasonConcern = (reasonConcern === val) ? null : val;
+    reasonConcern = val;
     document.querySelectorAll(".reason-btn").forEach((b) => b.classList.toggle("active", b.dataset.concern === reasonConcern));
     manualEdit = false;
     document.getElementById("btnResetScript").classList.add("hidden");
     renderScript(true);
   });
-});
-
-// "캐츠잉글리시 해야 하는 이유.docx"를 교사가 다시 업로드하면 mammoth.js로 원문 텍스트를 추출해
-// parseReasonDocxText()로 재인덱싱하고, 매칭된 항목만 REASON_DATA를 덮어씁니다(매칭 안 된 학년군/
-// 고민/구간은 기존 기본값을 그대로 유지).
-document.getElementById("reasonDocxInput").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  e.target.value = "";
-  if (!file) return;
-  if (typeof mammoth === "undefined") {
-    showToast("워드 파일 처리 기능을 불러오지 못했습니다(인터넷 연결을 확인해주세요).");
-    return;
-  }
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    const parsed = parseReasonDocxText(result.value);
-    let count = 0;
-    Object.keys(parsed).forEach((g) => {
-      if (!REASON_DATA[g]) REASON_DATA[g] = {};
-      Object.keys(parsed[g]).forEach((c) => {
-        if (!REASON_DATA[g][c]) REASON_DATA[g][c] = {};
-        Object.keys(parsed[g][c]).forEach((b) => {
-          REASON_DATA[g][c][b] = parsed[g][c][b];
-          count++;
-        });
-      });
-    });
-    if (!count) {
-      showToast("워드 파일에서 인식 가능한 문구를 찾지 못했습니다. 형식을 확인해주세요.");
-      return;
-    }
-    showToast(`워드 파일에서 ${count}개 문구를 반영했습니다.`);
-    if (reasonConcern) renderScript(true);
-  } catch (err) {
-    showToast("워드 파일을 읽지 못했습니다. .docx 형식인지 확인해주세요.");
-  }
 });
 
 document.getElementById("btnCopy").addEventListener("click", async () => {
