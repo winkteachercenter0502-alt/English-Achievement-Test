@@ -114,7 +114,7 @@
       <!-- 탭 메뉴 -->
       <div class="bg-white rounded-2xl shadow-sm border border-sky-100 p-1.5 flex gap-1.5">
         <button id="tabScriptBtn" class="tab-btn active flex-1 rounded-xl py-2.5 font-extrabold text-sm">① 실시간 상담 스크립트</button>
-        <button id="tabGuideBtn" class="tab-btn flex-1 rounded-xl py-2.5 font-extrabold text-sm">② 레벨별 로드맵 및 예시 파일 가이드</button>
+        <button id="tabGuideBtn" class="tab-btn flex-1 rounded-xl py-2.5 font-extrabold text-sm">② 레벨별 로드맵</button>
       </div>
 
       <!-- 탭 패널: 상담 스크립트 -->
@@ -168,9 +168,10 @@
     캐츠잉글리시 교사용 내부 도구 · 모든 데이터는 브라우저 내에서만 처리되며 서버로 전송되지 않습니다.
   </footer>
 
-  <!-- 이미지 확대 모달 -->
-  <div id="imgModal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-6" onclick="closeImgModal(event)">
-    <img id="imgModalSrc" src="" class="max-w-full max-h-full rounded-xl shadow-2xl">
+  <!-- 이미지 확대 모달: 마우스 휠로 확대·축소, 확대된 상태에서는 드래그로 이동할 수 있습니다. -->
+  <div id="imgModal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-6 overflow-hidden" onclick="closeImgModal(event)">
+    <img id="imgModalSrc" src="" draggable="false" class="max-w-full max-h-full rounded-xl shadow-2xl select-none">
+    <div class="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/70 text-xs font-bold pointer-events-none">스크롤로 확대·축소 · 더블클릭으로 원래 크기</div>
   </div>
 
   <!-- 토스트 -->
@@ -1031,8 +1032,35 @@ function renderLevelGuide() {
   `;
 }
 
+// 이미지 확대 모달 줌/이동 상태. 모달을 열 때마다 1배(원래 크기)로 초기화됩니다.
+let modalZoom = 1;
+let modalPanX = 0;
+let modalPanY = 0;
+let modalDragging = false;
+let modalDragStartX = 0;
+let modalDragStartY = 0;
+let modalPanStartX = 0;
+let modalPanStartY = 0;
+const MODAL_ZOOM_MIN = 1;
+const MODAL_ZOOM_MAX = 5;
+
+function applyModalTransform() {
+  const img = document.getElementById("imgModalSrc");
+  img.style.transform = `translate(${modalPanX}px, ${modalPanY}px) scale(${modalZoom})`;
+  img.style.cursor = modalZoom > MODAL_ZOOM_MIN ? (modalDragging ? "grabbing" : "grab") : "zoom-in";
+}
+
+function resetModalZoom() {
+  modalZoom = 1;
+  modalPanX = 0;
+  modalPanY = 0;
+  modalDragging = false;
+  applyModalTransform();
+}
+
 function openImgModal(src) {
   document.getElementById("imgModalSrc").src = encodeURI(src);
+  resetModalZoom();
   const modal = document.getElementById("imgModal");
   modal.classList.remove("hidden");
   modal.classList.add("flex");
@@ -1042,7 +1070,48 @@ function closeImgModal(e) {
   const modal = document.getElementById("imgModal");
   modal.classList.add("hidden");
   modal.classList.remove("flex");
+  resetModalZoom();
 }
+
+// 마우스 휠로 확대·축소합니다(Ctrl 없이 스크롤만으로 동작). { passive: false }를 줘야
+// preventDefault()가 실제로 먹혀서, 모달이 열려 있는 동안 배경 페이지가 같이 스크롤되거나
+// 브라우저 자체의 페이지 줌이 함께 동작하지 않습니다.
+document.getElementById("imgModal").addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const step = e.deltaY < 0 ? 0.25 : -0.25;
+  modalZoom = Math.min(MODAL_ZOOM_MAX, Math.max(MODAL_ZOOM_MIN, modalZoom + step));
+  if (modalZoom === MODAL_ZOOM_MIN) { modalPanX = 0; modalPanY = 0; }
+  applyModalTransform();
+}, { passive: false });
+
+// 확대된 상태에서 이미지를 드래그해 보고 싶은 부분으로 이동할 수 있습니다.
+document.getElementById("imgModalSrc").addEventListener("mousedown", (e) => {
+  if (modalZoom <= MODAL_ZOOM_MIN) return;
+  e.preventDefault();
+  modalDragging = true;
+  modalDragStartX = e.clientX;
+  modalDragStartY = e.clientY;
+  modalPanStartX = modalPanX;
+  modalPanStartY = modalPanY;
+  applyModalTransform();
+});
+window.addEventListener("mousemove", (e) => {
+  if (!modalDragging) return;
+  modalPanX = modalPanStartX + (e.clientX - modalDragStartX);
+  modalPanY = modalPanStartY + (e.clientY - modalDragStartY);
+  applyModalTransform();
+});
+window.addEventListener("mouseup", () => {
+  if (!modalDragging) return;
+  modalDragging = false;
+  applyModalTransform();
+});
+
+// 이미지를 더블클릭하면 확대·이동 상태를 원래 크기로 되돌립니다.
+document.getElementById("imgModalSrc").addEventListener("dblclick", (e) => {
+  e.stopPropagation();
+  resetModalZoom();
+});
 
 function showToast(msg) {
   const t = document.getElementById("toast");
@@ -1119,6 +1188,10 @@ document.getElementById("btnSample").addEventListener("click", () => {
 
 document.getElementById("btnClear").addEventListener("click", () => {
   document.getElementById("reportInput").value = "";
+  // 학생 이름도 함께 비워야 다음 리포트를 불러올 때 새 학생 이름으로 자동 입력됩니다.
+  // (studentName 자동 입력은 입력창이 비어 있을 때만 동작하므로, 여기서 안 지우면 이전 학생
+  // 이름이 계속 남아 있어 새 리포트를 붙여넣어도 이름이 안 바뀌는 문제가 있었습니다.)
+  document.getElementById("studentName").value = "";
   document.getElementById("parseStatus").textContent = "아직 불러온 리포트가 없습니다.";
   document.getElementById("parseStatus").className = "text-xs text-slate-400 mt-2";
   document.getElementById("parsedSummary").innerHTML = `<p class="text-slate-400">리포트를 붙여넣고 확인하면 결과가 이곳에 표시됩니다.</p>`;
