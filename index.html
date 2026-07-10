@@ -134,19 +134,9 @@
             </div>
           </div>
 
-          <!-- [★ 캐츠잉글리시를 해야 하는 이유] 매칭용 학부모 고민 유형 선택 블록 3개.
-               리포트를 확인하면 학년군에 맞는 고민 유형이 자동으로 선택되어(1~2학년군→②, 3~6학년군→①)
-               클릭 없이도 스크립트 맨 아래 [최종 학습 계획] 다음, 마무리 인사 앞에 다른 섹션들과 동일한
-               블록 형태로 항상 표시됩니다. 아래 3개 블록 중 하나를 클릭하면 그 고민 유형으로 바뀝니다. -->
-          <div class="grid grid-cols-3 gap-1.5 mb-2">
-            <button type="button" data-concern="academy" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">① 어학원/학원 고민</button>
-            <button type="button" data-concern="pad" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">② 타사 온라인/패드 학습 고민</button>
-            <button type="button" data-concern="studyroom" class="reason-btn rounded-lg py-2 px-2 text-xs font-bold border border-sky-200 text-sky-700 bg-sky-50">③ 공부방/방문학습지 고민</button>
-          </div>
-
           <div id="scriptOutput" contenteditable="true" spellcheck="false"
             class="whitespace-pre-wrap text-sm leading-relaxed bg-white border-2 border-blue-900 rounded-xl p-4 min-h-[260px] scroll-panel outline-none cursor-text focus:ring-2 focus:ring-sky-300 transition">
-학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.
+왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.
 확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.
           </div>
           <p class="text-xs text-slate-400 mt-1.5">✏️ 스크립트 안을 클릭하면 직접 띄어쓰기·표현을 수정할 수 있어요. 수정 후에는 위 버튼으로 자동 생성 내용으로 되돌릴 수 있어요.</p>
@@ -661,6 +651,11 @@ const CONCERN_LABELS = {
   studyroom: "③ 공부방/방문학습지 고민",
 };
 
+// generateScript()가 만드는 섹션 title과 renderScriptOutput()이 "이 섹션은 고민 유형 버튼을
+// 안에 그려야 하는 섹션인가"를 판별할 때 공통으로 쓰는 상수입니다. 문자열을 두 곳에 따로 적으면
+// 나중에 한쪽만 바뀌어 매칭이 깨지기 쉬우므로 하나로 통일했습니다.
+const REASON_SECTION_TITLE = "★ 캐츠잉글리시를 해야 하는 이유";
+
 const REASON_DATA = {
   "1~2": {
     academy: {
@@ -761,7 +756,7 @@ function generateScript(parsed, studentNameRaw) {
       { title: "공인 영어 레벨 예측 지표", body: indicatorPara },
       { title: "영역별 성취도", body: areaSection },
       { title: planTitle, body: planText },
-      ...(reasonText ? [{ title: "★ 캐츠잉글리시를 해야 하는 이유", body: reasonText }] : []),
+      ...(reasonText ? [{ title: REASON_SECTION_TITLE, body: reasonText }] : []),
     ],
     closing: `어머님, 오늘 꼼꼼히 살펴봐 주셔서 감사해요. 성취도평가는 앞으로도 정기적으로 진행되어서 ${sName}의 성장을 계속 함께 확인할 수 있어요. 지금 잘 하고 있는 부분은 더 자신감 갖게 해주고, 보완이 필요한 부분은 저도 라이브 클래스에서 더 신경 써드릴게요. ${sName}${subj} '나 영어 잘하고 있구나'라고 느낄 수 있도록 같이 만들어가요. 감사합니다!`,
   };
@@ -794,14 +789,31 @@ const SCRIPT_SECTION_BG = "bg-sky-100";
 const SCRIPT_ACCENT_BORDER = "border-blue-900";
 const SCRIPT_TITLE_TEXT = "text-blue-900";
 
+// [★ 캐츠잉글리시를 해야 하는 이유] 블록 안에 그리는 3개 고민 유형 버튼. #scriptOutput은
+// contenteditable="true"라서, 텍스트 편집 흐름에 끼어들지 않도록 버튼을 감싸는 div에
+// contenteditable="false"를 줘서 편집 불가능한 "섬(island)"으로 분리합니다. 클릭 이벤트는
+// #scriptOutput에 위임(delegation)으로 한 번만 등록되어 있으므로(이벤트 바인딩 섹션 참고),
+// 여기서는 매번 새로 그려지는 버튼에 개별적으로 리스너를 다시 붙일 필요가 없습니다.
+function buildReasonButtonsHtml() {
+  const items = Object.keys(CONCERN_LABELS).map((val) => {
+    const activeClass = reasonConcern === val ? " active" : "";
+    return `<button type="button" data-concern="${val}" class="reason-btn${activeClass} rounded-md py-1.5 px-1 text-[11px] font-bold border border-sky-200 text-sky-700 bg-white">${escapeHtml(CONCERN_LABELS[val])}</button>`;
+  }).join("");
+  return `<div class="grid grid-cols-3 gap-1 mb-1" contenteditable="false">${items}</div>`;
+}
+
 function renderScriptOutput(data) {
   const greetingBlock = `<div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 leading-relaxed">${textToHtml(data.greeting)}</div>`;
   const closingBlock = `<div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 leading-relaxed mt-px">${textToHtml(data.closing)}</div>`;
-  const sectionsHtml = data.sections.map((s) => `
+  const sectionsHtml = data.sections.map((s) => {
+    const reasonButtonsHtml = s.title === REASON_SECTION_TITLE ? buildReasonButtonsHtml() : "";
+    return `
     <div class="script-block ${SCRIPT_SECTION_BG} rounded-lg px-2 py-0.5 mt-px">
       <div class="border-l-4 ${SCRIPT_ACCENT_BORDER} pl-2 mb-0"><span class="font-extrabold text-sm ${SCRIPT_TITLE_TEXT}">${escapeHtml(s.title)}</span></div>
+      ${reasonButtonsHtml}
       <div class="leading-snug text-sm">${textToHtml(s.body)}</div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
   return `${greetingBlock}${sectionsHtml}${closingBlock}`;
 }
 
@@ -925,7 +937,7 @@ function updateScriptText() {
   const studentName = document.getElementById("studentName").value;
   const scriptBox = document.getElementById("scriptOutput");
   if (!lastParsed) {
-    scriptBox.innerHTML = `<div class="script-block bg-sky-100 rounded-lg px-2 py-0.5 leading-relaxed">학생 이름을 입력하고, 왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.<br>확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.</div>`;
+    scriptBox.innerHTML = `<div class="script-block bg-sky-100 rounded-lg px-2 py-0.5 leading-relaxed">왼쪽에서 리포트를 붙여넣은 뒤 [리포트 확인하기]를 눌러주세요.<br>확인이 완료되면 이곳에 상담 스크립트가 자동으로 생성됩니다.</div>`;
     return;
   }
   scriptBox.innerHTML = renderScriptOutput(generateScript(lastParsed, studentName));
@@ -1094,7 +1106,6 @@ document.getElementById("btnClear").addEventListener("click", () => {
   lastParsed = null;
   manualEdit = false;
   reasonConcern = null;
-  document.querySelectorAll(".reason-btn").forEach((b) => b.classList.remove("active"));
   document.getElementById("btnResetScript").classList.add("hidden");
   renderScript(true);
 });
@@ -1121,9 +1132,10 @@ document.getElementById("btnParse").addEventListener("click", () => {
 
   // [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형을 학년군에 맞는 기본값으로 자동 선택합니다
   // (1~2학년군 → 타사 온라인/패드, 3~4·5~6학년군 → 어학원/학원). 교사가 버튼을 직접 눌러 바꿀 때까지
-  // 이 기본값이 유지되며, 스크립트 하단에 다른 섹션들과 동일한 블록 형태로 항상 표시됩니다.
+  // 이 기본값이 유지되며, 스크립트 하단에 다른 섹션들과 동일한 블록 형태로 항상 표시됩니다. 버튼
+  // 자체는 renderScriptOutput()이 이 값을 보고 매번 새로 그리므로 여기서 DOM을 직접 건드릴 필요가
+  // 없습니다(아래 renderScript(true)가 스크립트 전체를 다시 그립니다).
   reasonConcern = getDefaultConcern(getGradeGroup(data.track));
-  document.querySelectorAll(".reason-btn").forEach((b) => b.classList.toggle("active", b.dataset.concern === reasonConcern));
 
   renderScript(true);
 
@@ -1153,20 +1165,22 @@ document.getElementById("btnResetScript").addEventListener("click", () => {
   updateScriptText();
 });
 
-// [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형 버튼: 클릭한 유형으로 스크립트를 즉시 재생성합니다.
-// 학년군 기본값이 항상 하나 선택되어 있는 상태이므로(getDefaultConcern), 버튼은 그 기본값을 다른
-// 고민 유형으로 "바꾸는" 용도로만 동작합니다(다시 눌러도 해제되지 않음 — 섹션이 항상 블록으로 떠 있어야
-// 하므로 "선택 없음" 상태 자체가 없습니다). 새 리포트 확인/지우기와 동일하게 forceRegenerate(true)로
-// 재생성하므로, 교사가 직접 수정한 내용이 있다면 이 버튼을 누르기 전에 먼저 확인해 주세요.
-document.querySelectorAll(".reason-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const val = btn.dataset.concern;
-    reasonConcern = val;
-    document.querySelectorAll(".reason-btn").forEach((b) => b.classList.toggle("active", b.dataset.concern === reasonConcern));
-    manualEdit = false;
-    document.getElementById("btnResetScript").classList.add("hidden");
-    renderScript(true);
-  });
+// [★ 캐츠잉글리시를 해야 하는 이유] 고민 유형 버튼은 이제 스크립트 블록 "안"에 렌더링되고 매번
+// innerHTML로 새로 그려지므로(renderScriptOutput의 buildReasonButtonsHtml 참고), 개별 버튼에
+// 매번 새로 리스너를 붙이는 대신 #scriptOutput 자체에 클릭 이벤트를 한 번만 위임(delegation)으로
+// 등록합니다. 학년군 기본값이 항상 하나 선택되어 있는 상태이므로(getDefaultConcern), 버튼은 그
+// 기본값을 다른 고민 유형으로 "바꾸는" 용도로만 동작합니다(다시 눌러도 해제되지 않음 — 섹션이 항상
+// 블록으로 떠 있어야 하므로 "선택 없음" 상태 자체가 없습니다). 새 리포트 확인/지우기와 동일하게
+// forceRegenerate(true)로 재생성하므로, 교사가 직접 수정한 내용이 있다면 이 버튼을 누르기 전에
+// 먼저 확인해 주세요.
+document.getElementById("scriptOutput").addEventListener("click", (e) => {
+  const btn = e.target.closest(".reason-btn");
+  if (!btn) return;
+  e.preventDefault();
+  reasonConcern = btn.dataset.concern;
+  manualEdit = false;
+  document.getElementById("btnResetScript").classList.add("hidden");
+  renderScript(true);
 });
 
 document.getElementById("btnCopy").addEventListener("click", async () => {
