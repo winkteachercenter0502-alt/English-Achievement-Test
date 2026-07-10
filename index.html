@@ -632,11 +632,30 @@ ${conclusion}`;
    원본 출처: "캐츠잉글리시 해야 하는 이유.docx" (교사 폴더에 위치). 아래 REASON_DATA에 원문 그대로
    하드코딩되어 있으며(문구가 바뀌면 이 상수를 직접 수정), 학년군 × 점수 구간 × 학부모 고민 유형(3개
    블록 버튼)을 조합해 [최종 학습 계획] 다음, 마무리 인사 앞에 독립 섹션으로 삽입됩니다.
-   학년군은 리포트 텍스트를 직접 파싱하지 않고, 이미 신뢰도 높게 파싱되는 트랙(Star/Galaxy/
-   Universe)을 LEVEL_DATA의 학년 표기(1,2학년 / 3,4학년 / 5,6학년)와 동일하게 매핑해 구합니다.
+   학년군은 parsed.studentGrade(리포트의 "초등학교 N학년" 표기)를 최우선으로 파싱해서 구합니다.
+   레벨 트랙(Star/Galaxy/Universe)은 실제 학년과 다를 수 있어서(예: 1학년인데 진도가 빨라 Galaxy를
+   응시하는 경우) 트랙 기반 매핑을 기본으로 쓰면 리포트에 적힌 실제 학년과 어긋나는 버그가 있었습니다
+   — 트랙 매핑(TRACK_GRADE_GROUP)은 studentGrade를 못 읽었을 때만 쓰는 보조 수단으로 남겨둡니다.
 ----------------------------------------------------------------------------------------- */
+// "초등학교 1학년", "초1", "1학년" 등 다양한 표기에서 숫자만 뽑아 학년군으로 변환합니다.
+function getGradeGroupFromGradeText(gradeText) {
+  if (!gradeText) return null;
+  const m = gradeText.match(/(\d+)\s*학년/);
+  if (!m) return null;
+  const grade = parseInt(m[1], 10);
+  if (grade >= 1 && grade <= 2) return "1~2";
+  if (grade >= 3 && grade <= 4) return "3~4";
+  if (grade >= 5 && grade <= 6) return "5~6";
+  return null;
+}
+
+// 트랙(Star/Galaxy/Universe)만으로 학년군을 추정하는 보조 매핑입니다. parsed.studentGrade를
+// 읽지 못했을 때(리포트 형식이 달라진 경우 등)의 최후 폴백으로만 사용됩니다.
 const TRACK_GRADE_GROUP = { Star: "1~2", Galaxy: "3~4", Universe: "5~6" };
-function getGradeGroup(track) { return TRACK_GRADE_GROUP[track] || null; }
+
+function getGradeGroup(parsed) {
+  return getGradeGroupFromGradeText(parsed.studentGrade) || TRACK_GRADE_GROUP[parsed.track] || null;
+}
 
 // 새 리포트를 확인할 때마다 학년군에 맞는 고민 유형을 기본으로 자동 선택합니다(교사가 매번 버튼을
 // 누르지 않아도 [★ 캐츠잉글리시를 해야 하는 이유] 블록이 항상 채워져 있도록). 저학년(1~2학년군)은
@@ -703,7 +722,7 @@ const REASON_DATA = {
 
 function buildReasonSection(parsed, concern) {
   if (!concern) return null;
-  const gradeGroup = getGradeGroup(parsed.track);
+  const gradeGroup = getGradeGroup(parsed);
   const band = getScoreBand(parsed.overallScore);
   if (!gradeGroup || !band) {
     return "학년군 또는 종합 점수 정보를 리포트에서 확인하지 못해 맞춤 문구를 표시할 수 없습니다. 왼쪽 리포트 확인 결과를 다시 확인해주세요.";
@@ -1135,7 +1154,7 @@ document.getElementById("btnParse").addEventListener("click", () => {
   // 이 기본값이 유지되며, 스크립트 하단에 다른 섹션들과 동일한 블록 형태로 항상 표시됩니다. 버튼
   // 자체는 renderScriptOutput()이 이 값을 보고 매번 새로 그리므로 여기서 DOM을 직접 건드릴 필요가
   // 없습니다(아래 renderScript(true)가 스크립트 전체를 다시 그립니다).
-  reasonConcern = getDefaultConcern(getGradeGroup(data.track));
+  reasonConcern = getDefaultConcern(getGradeGroup(data));
 
   renderScript(true);
 
